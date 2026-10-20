@@ -77,7 +77,8 @@ assumption broke.
 
 ## Next steps
 
-- [ ] Pick sim stack (Isaac Lab vs MuJoCo) and install on Moe.
+- [ ] Install Genesis (AMD docker path) on Moe; run the multi-cam tutorial.
+- [ ] Download EgoDex test split (16 GB) as external-data starter.
 - [ ] Order SO-101 teleop pair when budget allows.
 - [ ] Prototype: dual-camera (external + eye) recording in sim, dump
       LeRobot-format episodes with joint labels.
