@@ -63,6 +63,18 @@ Moe: 4x AMD V620 GPUs. Policy fine-tunes on hours of demos = overnight jobs,
 no cloud needed. Sim stack candidates: Isaac Lab or MuJoCo for avatars,
 LeRobot for the real arm side, open-weights video prediction models.
 
+## Benchmark: the cooking video test
+
+Final-model acceptance test: feed clips from fixed-camera cooking videos
+(heads-and-hands framing, repetitive manipulative tasks) and score the
+model on (a) predicted internal/first-person video and (b) predicted
+kinematics streams. Fixed cameras make the external view stable enough to
+learn from; cooking is dense in object interactions and contact events.
+Honest caveat: human hands are not robot grippers (embodiment gap), so
+treat kinematics output as an embodiment-agnostic hand pose first, retargeted
+to the arm later. Failure on this benchmark tells us exactly which
+assumption broke.
+
 ## Next steps
 
 - [ ] Pick sim stack (Isaac Lab vs MuJoCo) and install on Moe.
