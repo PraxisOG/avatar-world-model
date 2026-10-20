@@ -2,7 +2,28 @@
 
 Origin: drive-home conversation, 2026-10-20 (Winston + Bella).
 
-## Thesis
+## Thesis (v2, 2026-10-20): data-first
+
+**The deliverable is the dataset and the capture pipeline.** Models churn;
+paired observation-action data in an open, standard format (LeRobot)
+appreciates regardless of which architecture wins. Prior art (Mirror
+Learning, EgoExo-WM, EgoMimic, EgoDemoGen) confirms every architecture's
+real bottleneck is ground-truth paired data, not model quality.
+
+Ordering that follows:
+1. Build the paired-view capture factory (sim avatar, eye-cam + external
+   cam, joint-true labels, LeRobot export, clean provenance).
+2. Publish data + pipeline openly. That is the contribution.
+3. The world model is downstream proof: it exists to demonstrate the data
+   is good, and to run the pixel-head vs latent-head shootout on identical
+   data. The cooking benchmark scores data quality as much as model quality.
+
+Why data-first is the honest difficulty ordering: building a rigorous
+capture pipeline is engineering with a known ceiling; training a genuinely
+good world model is research with an unknown one. Betting on the pipeline
+means shipping value even if the model disappoints.
+
+## Thesis (v1, original): world-model-first
 
 Hardware is becoming as valuable as the software that runs on it, but the
 scarce resource in robotics is *paired data*: external observations locked to
