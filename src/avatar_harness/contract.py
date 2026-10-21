@@ -25,11 +25,12 @@ INTRINSICS = MappingProxyType(_INTRINSICS)
 CAMERAS = MappingProxyType({
     "external": MappingProxyType({
         **_INTRINSICS, "identity": "fixed", "parent_frame": "world",
-        "extrinsics": "pending Task 2 probe",
+        # Resolved numerically at runtime by mujoco_env.py from the compiled
+        # model; canonical values recorded in docs/v0.1-experiment-contract.md.
     }),
     "wrist": MappingProxyType({
         **_INTRINSICS, "identity": "wrist", "parent_frame": "gripper_link",
-        "mount_link": "wrist_camera_mount_link", "extrinsics": "pending Task 2 probe",
+        "mount_link": "wrist_camera_mount_link",  # extrinsics resolved at runtime, see external note
     }),
 })
 
