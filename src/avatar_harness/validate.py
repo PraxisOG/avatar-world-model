@@ -308,6 +308,10 @@ def validate_episode(episode_dir) -> ValidationReport:
                     if is_mock:
                         _require(np.array_equal(rgb, render_snapshot(snapshot, camera)),
                                  f"{camera} replay differs at {index}; stale or duplicated render buffer")
+        if manifest["engine_name"] == "avatar_harness.mujoco":
+            # Optional engine imported only for its episodes; CPU mock tests stay independent.
+            from .mujoco_env import verify_replay
+            return verify_replay(root, manifest, rows, states)
         return ("all PNGs decoded; mock RGB/segmentation re-render exactly matches reloaded state" if is_mock else
                 "all PNGs decoded and RGB digests match; live-engine re-render is outside this offline check")
 
