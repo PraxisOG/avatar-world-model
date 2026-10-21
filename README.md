@@ -71,3 +71,10 @@ File an issue with the label `review` for critiques, `prior-art` for
 pointers we've missed, or `design` for proposals. Design-doc changes should
 arrive as an issue or PR with reasoning attached; this doc is the
 single source of truth for the thesis.
+
+## Feasibility study and implementation roadmap
+
+The [report index](docs/README.md) links the feasibility study and six-milestone
+roadmap, with a scope note explaining the later fixed-upper-body-avatar discussion.
+The PDFs preserve their original arm-first assumptions and estimates; read the
+scope note before implementation. These are proposed plans, not completed work.
