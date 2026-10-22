@@ -17,10 +17,11 @@ from PIL import Image
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .contract import (ACTION_HOLD_STEPS, CAMERAS, GRIPPER_FORMULA, IMAGE_SHAPE,
-                       JOINT_ORDER, PHYSICS_DT_S, PHYSICS_RATE_HZ, POLICY_INPUT_FIELDS,
+from .contract import (ACTION_HOLD_STEPS, ARMS, ARM_JOINT_INDICES, BASE_POSES, CAMERAS, COMMAND_JOINT_ORDER,
+                       CONTRACT_REVISION, GRIPPER_FORMULA, GRIPPER_INDICES, IMAGE_SHAPE,
+                       JOINT_ORDER, RAW_JOINT_ORDER, PHYSICS_DT_S, PHYSICS_RATE_HZ, POLICY_INPUT_FIELDS,
                        SIM_ONLY_FIELDS, SIM_ONLY_SCHEMA, TRANSITION_SCHEMA)
-from .env_api import SimState, state_checksum
+from .env_api import Action, SimState, state_checksum
 
 
 @dataclass
@@ -93,7 +94,7 @@ def _snapshot(row):
         measured_joint_position_rad=row["measured_joint_position_rad"],
         measured_joint_velocity_rad_s=row["measured_joint_velocity_rad_s"],
         measured_gripper_opening=row["measured_gripper_opening"],
-        measured_ee_pose=row["measured_ee_pose"], object_pose_world=row["object_pose_world"],
+        left_ee_pose=row["left_ee_pose"], right_ee_pose=row["right_ee_pose"], object_pose_world=row["object_pose_world"],
         contact_forces=row["contact_forces"], segmentation=lambda camera: None,
         terminated=row["terminated"],
     )
@@ -144,16 +145,27 @@ def validate_episode(episode_dir) -> ValidationReport:
         return "contract columns, shapes, dtypes and finite values"
 
     def calibration():
+        _require(manifest["contract_revision"] == CONTRACT_REVISION, "expected contract Rev B")
         _require(manifest["joint_order"] == list(JOINT_ORDER), "joint order changed")
+        _require(manifest["raw_urdf_joint_order"] == list(RAW_JOINT_ORDER), "raw URDF joint order changed")
+        _require(manifest["command_joint_order"] == list(COMMAND_JOINT_ORDER), "command arm order changed")
+        _require(manifest["gripper_order"] == list(ARMS), "gripper arm order changed")
+        _require(manifest["scene"]["joint_names"] == list(JOINT_ORDER)
+                 and manifest["scene"]["raw_urdf_joint_names"] == list(RAW_JOINT_ORDER), "scene joint order changed")
+        expected_bases = {arm: {"position_m": list(pos), "yaw_rad": yaw}
+                          for arm, (pos, yaw) in BASE_POSES.items()}
+        _require(manifest["scene"]["base_poses"] == expected_bases, "base poses/arm identities changed")
         _require(manifest["physics_rate_hz"] == PHYSICS_RATE_HZ
                  and manifest["physics_dt_s"] == PHYSICS_DT_S
                  and manifest["action_hold_steps"] == manifest["N"] == ACTION_HOLD_STEPS
                  and manifest["control_interval_s"] == PHYSICS_DT_S, "wrong control timing")
-        mapping = manifest["gripper_mapping"]
-        _require(mapping["formula"] == GRIPPER_FORMULA and mapping["units"] == "rad", "wrong gripper mapping")
-        _require(np.isfinite([mapping["q_closed"], mapping["q_open"]]).all()
-                 and mapping["q_closed"] != mapping["q_open"], "invalid gripper limits")
-        _require(set(manifest["cameras"]) == set(CAMERAS), "must have exactly external and wrist cameras")
+        _require(set(manifest["gripper_mapping"]) == set(ARMS), "expected one gripper mapping per arm")
+        for arm in ARMS:
+            mapping = manifest["gripper_mapping"][arm]
+            _require(mapping["formula"] == GRIPPER_FORMULA and mapping["units"] == "rad", "wrong gripper mapping")
+            _require(np.isfinite([mapping["q_closed"], mapping["q_open"]]).all()
+                     and mapping["q_closed"] != mapping["q_open"], "invalid gripper limits")
+        _require(set(manifest["cameras"]) == set(CAMERAS), "must have exactly external and head cameras")
         for name, expected in CAMERAS.items():
             camera = manifest["cameras"][name]
             for key, value in expected.items():
@@ -161,11 +173,8 @@ def validate_episode(episode_dir) -> ValidationReport:
                     _require(camera[key] == (list(value) if isinstance(value, tuple) else value),
                              f"wrong {name} camera field {key}")
             transform = _rigid(camera["extrinsics"])
-            if name == "wrist":
-                mount = _rigid(camera["mount_transform"])
-                optical = _rigid(camera["optical_frame_offset"])
-                _require(np.allclose(mount @ optical, transform, rtol=0, atol=1e-6),
-                         "wrist extrinsics disagree with mount and optical offset")
+            _require(np.allclose(transform, expected["extrinsics"], rtol=0, atol=1e-8),
+                     f"{name} extrinsics disagree with frozen contract")
         for key in ("episode_id", "engine", "engine_name", "engine_version", "source_revision"):
             _require(isinstance(manifest[key], str) and bool(manifest[key]), f"missing provenance {key}")
         _require(isinstance(manifest["seed"], int), "seed must be integer")
@@ -199,9 +208,9 @@ def validate_episode(episode_dir) -> ValidationReport:
 
     def alignment():
         for row in rows:
-            _require(row["external_step_index"] == row["wrist_step_index"] == row["step_index"],
+            _require(row["external_step_index"] == row["head_step_index"] == row["step_index"],
                      f'camera step mismatch at {row["step_index"]}')
-        return "external_step_index == wrist_step_index == step_index"
+        return "external_step_index == head_step_index == step_index"
 
     def chain():
         names = ("measured_joint_position_rad", "measured_joint_velocity_rad_s", "measured_gripper_opening")
@@ -211,7 +220,7 @@ def validate_episode(episode_dir) -> ValidationReport:
                 _require(_bits(left[f"next_{name}"]) == _bits(right[name]), f"bitwise chain mismatch: {name}")
         _require(len(states) == len(rows) + 1, "final next state missing")
         for index, row in enumerate(rows):
-            for name in (*names, "measured_ee_pose"):
+            for name in (*names, "left_ee_pose", "right_ee_pose"):
                 _require(_bits(row[name]) == _bits(states[index][name]), f"observation/companion mismatch: {name}")
             for name in names:
                 _require(_bits(row[f"next_{name}"]) == _bits(states[index + 1][name]),
@@ -237,18 +246,25 @@ def validate_episode(episode_dir) -> ValidationReport:
         return "unique episode/step keys and t/30 timing"
 
     def commands():
-        delta = max(np.max(np.abs(np.asarray(row["command_joint_position_target_rad"])
-                                  - np.asarray(row["measured_joint_position_rad"][:5]))) for row in rows)
-        _require(delta > 1e-6, "all commands equal measured state; suggests relabeling bug")
         targets = np.asarray([row["command_joint_position_target_rad"] for row in rows])
-        _require(np.any(np.ptp(targets, axis=0) > 0), "scripted arm commands are constant")
-        return f"max |command-measured| = {delta:.6g} rad; nonconstant commands"
+        measured = np.asarray([row["measured_joint_position_rad"] for row in rows])[:, ARM_JOINT_INDICES]
+        deltas = []
+        for i, arm in enumerate(ARMS):
+            section = slice(5*i, 5*i+5)
+            delta = float(np.max(np.abs(targets[:, section] - measured[:, section])))
+            _require(delta > 1e-6, f"all {arm} commands equal measured state; suggests relabeling bug")
+            _require(np.any(np.ptp(targets[:, section], axis=0) > 0), f"scripted {arm} arm commands are constant")
+            deltas.append(f"{arm}={delta:.6g}")
+        return "max |command-measured| rad: " + ", ".join(deltas) + "; nonconstant commands on both arms"
 
     def motion():
-        positions = np.asarray([row["measured_joint_position_rad"][:5] for row in rows])
-        span = float(np.max(np.ptp(positions, axis=0)))
-        _require(span > 0.1, f"arm motion range {span:.6g} rad does not exceed 0.1 rad")
-        return f"max measured arm range = {span:.6g} rad"
+        positions = np.asarray([row["measured_joint_position_rad"] for row in rows])
+        spans = []
+        for i, arm in enumerate(ARMS):
+            span = float(np.max(np.ptp(positions[:, 6*i:6*i+5], axis=0)))
+            _require(span > 0.1, f"{arm} arm motion range {span:.6g} rad does not exceed 0.1 rad")
+            spans.append(f"{arm}={span:.6g}")
+        return "max measured arm range rad: " + ", ".join(spans)
 
     def quarantine():
         _require(set(table.column_names) == set(TRANSITION_SCHEMA.names),
@@ -265,16 +281,19 @@ def validate_episode(episode_dir) -> ValidationReport:
         return "privileged fields/files isolated and flagged; policy input allowlist intact"
 
     def measured_values():
-        mapping = manifest["gripper_mapping"]
         for state in states:
-            opening = state["measured_gripper_opening"]
-            q = state["measured_joint_position_rad"][5]
-            expected = mapping["q_closed"] + opening * (mapping["q_open"] - mapping["q_closed"])
-            _require(0 <= opening <= 1 and np.isclose(q, expected, atol=1e-6, rtol=0), "measured gripper mapping disagrees")
-            for pose in (state["measured_ee_pose"], state["object_pose_world"]):
+            for i, arm in enumerate(ARMS):
+                mapping = manifest["gripper_mapping"][arm]
+                opening = state["measured_gripper_opening"][i]
+                q = state["measured_joint_position_rad"][GRIPPER_INDICES[i]]
+                expected = mapping["q_closed"] + opening * (mapping["q_open"] - mapping["q_closed"])
+                _require(0 <= opening <= 1 and np.isclose(q, expected, atol=1e-6, rtol=0),
+                         f"{arm} measured gripper mapping disagrees")
+            for pose in (state["left_ee_pose"], state["right_ee_pose"], state["object_pose_world"]):
                 _require(abs(np.linalg.norm(pose[3:]) - 1) < 1e-5, "non-unit pose quaternion")
-        _require(all(0 <= row["command_gripper_opening"] <= 1 for row in rows), "command opening outside [0,1]")
-        return "gripper mapping and xyzw quaternion normalization"
+        _require(all(0 <= opening <= 1 for row in rows for opening in row["command_gripper_opening"]),
+                 "command opening outside [0,1]")
+        return "both gripper mappings and xyzw quaternion normalization"
 
     def stamps():
         for index, row in enumerate(states):
@@ -290,12 +309,19 @@ def validate_episode(episode_dir) -> ValidationReport:
 
     def pixels():
         # Importing this CPU fake never loads a simulator or GPU runtime.
-        from .mock_env import ENGINE_NAME, ENGINE_VERSION, render_snapshot, segmentation_snapshot
+        from .mock_env import ENGINE_NAME, ENGINE_VERSION, MockEnv, render_snapshot, segmentation_snapshot
         is_mock = manifest["engine_name"] == ENGINE_NAME
         if is_mock:
             _require(manifest["engine_version"] == ENGINE_VERSION, "unsupported mock replay version")
+            scene = manifest["scene"]
+            replay = MockEnv(table_half_extents=scene["geometry"]["table_half_extents_m"],
+                             object_xy=scene["initial_state"]["object_pose_world"][:2])
+            replay.reset(manifest["seed"])
         for index, state in enumerate(states):
             snapshot = _snapshot(state)
+            if is_mock:
+                _require(state_checksum(replay.get_state()) == state["state_checksum"],
+                         f"mock dynamics/arm order replay differs at {index}")
             for camera in CAMERAS:
                 labels = _read_png(root, state["segmentation_paths"][camera], IMAGE_SHAPE[:2], rgb=False)
                 if is_mock:
@@ -308,6 +334,9 @@ def validate_episode(episode_dir) -> ValidationReport:
                     if is_mock:
                         _require(np.array_equal(rgb, render_snapshot(snapshot, camera)),
                                  f"{camera} replay differs at {index}; stale or duplicated render buffer")
+            if is_mock and index < len(rows):
+                replay.step(Action(rows[index]["command_joint_position_target_rad"],
+                                   rows[index]["command_gripper_opening"]), ACTION_HOLD_STEPS)
         if manifest["engine_name"] == "avatar_harness.mujoco":
             # Optional engine imported only for its episodes; CPU mock tests stay independent.
             from .mujoco_env import verify_replay

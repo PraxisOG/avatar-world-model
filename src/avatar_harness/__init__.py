@@ -4,4 +4,4 @@ Mock results establish harness integrity, not simulator fidelity or the ROCm
 training gate. Only NumPy, PyArrow, and Pillow are runtime dependencies.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

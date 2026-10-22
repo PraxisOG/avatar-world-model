@@ -17,19 +17,19 @@ def _array(value, shape):
 
 @dataclass(frozen=True)
 class Action:
-    """Section 3: five absolute arm targets and a separate normalized opening.
+    """Section 3: ten absolute arm targets and two normalized openings (left, right).
 
     Quantize at the controller boundary so the actual commands sent are exactly
     representable in the contract's float32 storage.
     """
 
     joint_position_target_rad: np.ndarray
-    gripper_opening: float
+    gripper_opening: np.ndarray
 
     def __post_init__(self):
-        object.__setattr__(self, "joint_position_target_rad", _array(self.joint_position_target_rad, (5,)))
-        value = float(np.float32(self.gripper_opening))
-        if not np.isfinite(value) or not 0 <= value <= 1:
+        object.__setattr__(self, "joint_position_target_rad", _array(self.joint_position_target_rad, (10,)))
+        value = _array(self.gripper_opening, (2,))
+        if np.any((value < 0) | (value > 1)):
             raise ValueError("gripper opening must be finite and in [0, 1]")
         object.__setattr__(self, "gripper_opening", value)
 
@@ -44,8 +44,8 @@ class EpisodeInfo:
     source_revision: str
     scene: dict
     cameras: dict
-    q_closed: float
-    q_open: float
+    q_closed: tuple[float, float]
+    q_open: tuple[float, float]
     device: str = "CPU"
 
 
@@ -62,8 +62,9 @@ class SimState:
     sim_time: float
     measured_joint_position_rad: np.ndarray
     measured_joint_velocity_rad_s: np.ndarray
-    measured_gripper_opening: float
-    measured_ee_pose: np.ndarray
+    measured_gripper_opening: np.ndarray
+    left_ee_pose: np.ndarray
+    right_ee_pose: np.ndarray
     object_pose_world: np.ndarray
     contact_forces: np.ndarray
     segmentation: Callable[[str], np.ndarray]
@@ -75,27 +76,24 @@ class SimState:
         if not np.isfinite(self.sim_time) or self.sim_time < 0:
             raise ValueError("sim_time must be finite and nonnegative")
         for name, size in (
-            ("measured_joint_position_rad", 6), ("measured_joint_velocity_rad_s", 6),
-            ("measured_ee_pose", 7), ("object_pose_world", 7), ("contact_forces", 3),
+            ("measured_joint_position_rad", 12), ("measured_joint_velocity_rad_s", 12),
+            ("measured_gripper_opening", 2), ("left_ee_pose", 7), ("right_ee_pose", 7),
+            ("object_pose_world", 7), ("contact_forces", 3),
         ):
             object.__setattr__(self, name, _array(getattr(self, name), (size,)))
-        opening = float(np.float32(self.measured_gripper_opening))
-        if not np.isfinite(opening):
-            raise ValueError("measured opening must be finite")
-        object.__setattr__(self, "measured_gripper_opening", opening)
 
 
 def canonical_state_bytes(state: SimState, *, privileged: bool = True) -> bytes:
     """Sections 4–6: little-endian float64 encoding of stored numeric values.
 
-    Order: step, time, measured q, measured dq, opening, EE pose, then (when
-    privileged) object pose, contact forces, terminated as 0/1. Float32 fields
+    Order: step, time, measured q, measured dq, openings (left, right), left
+    EE pose, right EE pose, then (when privileged) object pose, contact forces, terminated as 0/1. Float32 fields
     are promoted *after* quantization. Segmentation is a derived callable, not
     a numeric state field. Its PNGs are independently checked on reload.
     """
     values = [state.step_index, state.sim_time, *state.measured_joint_position_rad,
-              *state.measured_joint_velocity_rad_s, state.measured_gripper_opening,
-              *state.measured_ee_pose]
+              *state.measured_joint_velocity_rad_s, *state.measured_gripper_opening,
+              *state.left_ee_pose, *state.right_ee_pose]
     if privileged:
         values.extend([*state.object_pose_world, *state.contact_forces, int(state.terminated)])
     return np.asarray(values, dtype="<f8").tobytes()

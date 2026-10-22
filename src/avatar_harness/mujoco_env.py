@@ -8,6 +8,7 @@ EE poses use gripper_link relative to base_link, with xyzw quaternions.
 
 import atexit
 import ctypes
+from copy import deepcopy
 from dataclasses import dataclass
 import hashlib
 import json
@@ -21,17 +22,18 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from .contract import (CAMERAS, IMAGE_SHAPE, JOINT_ORDER, PHYSICS_DT_S,
-                       PHYSICS_RATE_HZ, gripper_opening, gripper_target)
+from .contract import (ARMS, ARM_JOINT_INDICES, BASE_POSES, BLOCK_POS, CAMERAS,
+                       EXTERNAL_POS, EXTERNAL_LOOKAT, HEAD_POS, HEAD_LOOKAT,
+                       GRIPPER_INDICES, IMAGE_SHAPE, JOINT_ORDER, RAW_JOINT_ORDER,
+                       PHYSICS_DT_S, PHYSICS_RATE_HZ, gripper_opening, gripper_target)
 from .env_api import Action, EpisodeInfo, SimState, state_checksum
 
 ENGINE_NAME = "avatar_harness.mujoco"
 ASSETS = Path(__file__).resolve().parents[2] / "assets"
 EE_BODY = "gripper_link"
-EXTERNAL_POS = (0.72, -0.70, 0.52)
-EXTERNAL_LOOKAT = (0.16, 0.0, 0.15)
-WRIST_POS = (0.03, 0.0, -0.105)
-WRIST_EULER = (0.0, 1.35, 0.0)  # MuJoCo xyz, radians, camera looks down -Z.
+MERGE_METHOD = ("compile the pinned URDF once with fusestatic=false; XML deepcopy of base_link "
+                "subtree, prefix body/joint/geom names left_arm/ then right_arm/; share immutable "
+                "mesh/material assets; append block last; qpos/qvel slices [0:6], [6:12]")
 _CPU_READY = False
 
 
@@ -124,7 +126,7 @@ def _build_model(mj):
     for mesh in urdf.iter("mesh"):
         mesh.set("filename", str((ASSETS / mesh.get("filename")).resolve()))
     source = mj.MjModel.from_xml_string(ET.tostring(urdf, encoding="unicode"))
-    if tuple(source.joint(i).name for i in range(source.njnt)) != JOINT_ORDER:
+    if tuple(source.joint(i).name for i in range(source.njnt)) != RAW_JOINT_ORDER:
         raise ValueError("compiled URDF joint order disagrees with the contract")
     # MjModel has no to_xml_string in 3.16: mj_saveLastXML is its equivalent.
     with tempfile.TemporaryDirectory(prefix="so101-mjcf-") as directory:
@@ -151,36 +153,50 @@ def _build_model(mj):
     for joint in root.findall(".//joint"):
         joint.set("damping", "0.1")
         joint.set("armature", "0.01")
-    # MuJoCo does not automatically filter the fixed base's adjacent joint.
-    # Its convex hull encloses the shoulder bearing, causing false contacts.
-    ET.SubElement(ET.SubElement(root, "contact"), "exclude",
-                  body1="base_link", body2="shoulder_link")
+    # Merge at the XML level. Mesh/material resources are identical and shared;
+    # only instance-local bodies, joints and geoms need namespacing. Inserting
+    # complete left then right subtrees makes each arm's state slice contiguous.
     world = root.find("worldbody")
+    source_base = world.find("body[@name='base_link']")
+    if source_base is None or len(world.findall("body")) != 1:
+        raise ValueError("expected exactly one base_link subtree in compiled URDF")
+    world.remove(source_base)
+    contact = ET.SubElement(root, "contact")
+    for arm in ARMS:
+        prefix = f"{arm}_arm/"
+        base = deepcopy(source_base)
+        for element in base.iter():
+            if "name" in element.attrib:
+                element.set("name", prefix + element.get("name"))
+        position, yaw = BASE_POSES[arm]
+        base.set("pos", _numbers(position))
+        base.set("quat", _numbers([math.cos(yaw / 2), 0, 0, math.sin(yaw / 2)]))
+        world.append(base)
+        # The fixed base hull encloses the adjacent shoulder bearing.
+        ET.SubElement(contact, "exclude", body1=prefix + "base_link", body2=prefix + "shoulder_link")
     ET.SubElement(world, "geom", name="table", type="plane", size=".5 .4 .01",
                   material="table_gray", friction=".8 .005 .0001")
-    block = ET.SubElement(world, "body", name="block", pos=".43 .04 .015")
+    block = ET.SubElement(world, "body", name="block", pos=_numbers(BLOCK_POS))
     ET.SubElement(block, "freejoint", name="block_free")
     ET.SubElement(block, "geom", name="block_geom", type="box", size=".015 .015 .015",
                   mass=".05", material="block_red", friction=".8 .005 .0001")
     ET.SubElement(world, "light", name="workspace_light", pos="0 -.4 1.2", dir=".1 .2 -1",
                   diffuse=".8 .8 .8", ambient=".3 .3 .3", directional="true")
-    z = np.asarray(EXTERNAL_POS) - EXTERNAL_LOOKAT
-    z /= np.linalg.norm(z)
-    x = np.cross([0, 0, 1], z)
-    x /= np.linalg.norm(x)
-    y = np.cross(z, x)
-    ET.SubElement(world, "camera", name="external", pos=_numbers(EXTERNAL_POS),
-                  xyaxes=_numbers([*x, *y]), fovy="60")
-    gripper = world.find(f".//body[@name='{EE_BODY}']")
-    if gripper is None:
-        raise ValueError("compiled model is missing gripper_link")
-    mount = ET.SubElement(gripper, "body", name="wrist_camera_mount_link", pos=_numbers(WRIST_POS))
-    ET.SubElement(mount, "camera", name="wrist", euler=_numbers(WRIST_EULER), fovy="60")
+    for camera, definition in CAMERAS.items():
+        optical = np.asarray(definition["extrinsics"])
+        rotation = optical[:3, :3] @ np.diag([1., -1., -1.])
+        parent = world
+        position = optical[:3, 3]
+        if camera == "head":
+            parent = ET.SubElement(world, "body", name="head_camera_mast", pos=_numbers(position))
+            position = np.zeros(3)
+        ET.SubElement(parent, "camera", name=camera, pos=_numbers(position),
+                      xyaxes=_numbers([*rotation[:, 0], *rotation[:, 1]]), fovy="60")
     actuators = ET.SubElement(root, "actuator")
     for name in JOINT_ORDER:
         ET.SubElement(actuators, "position", name=f"{name}_position", joint=name,
                       kp="20", kv="1", ctrllimited="true",
-                      ctrlrange=_numbers(source.joint(name).range))
+                      ctrlrange=_numbers(source.joint(name.split("/", 1)[1]).range))
     xml = ET.tostring(root, encoding="unicode")
     return mj.MjModel.from_xml_string(xml), xml, provenance
 
@@ -195,7 +211,7 @@ class MuJoCoState(SimState):
 
 
 class MuJoCoEnv:
-    """A six-actuator SO-101 and free rigid block; no episode termination."""
+    """Two SO-101 instances (12 actuators) and one free rigid block; no episode termination."""
 
     def __init__(self):
         self.mj = _load_mujoco()
@@ -214,12 +230,27 @@ class MuJoCoEnv:
         self.actuator_ids = np.asarray([model.actuator(f"{name}_position").id for name in JOINT_ORDER])
         if (tuple(model.joint(int(i)).name for i in self.joint_ids) != JOINT_ORDER
                 or not np.array_equal(model.actuator_trnid[self.actuator_ids, 0], self.joint_ids)
-                or len(set(self.qpos_indices)) != 6 or len(set(self.qvel_indices)) != 6):
+                or not np.array_equal(self.qpos_indices, np.arange(12))
+                or not np.array_equal(self.qvel_indices, np.arange(12))):
             raise ValueError("joint/actuator address mapping disagrees with contract")
         self.joint_ranges = model.jnt_range[self.joint_ids].copy()
-        self.q_closed, self.q_open = self.joint_ranges[-1].tolist()
-        self.ee_id = model.body(EE_BODY).id
-        self.base_id = model.body("base_link").id
+        self.q_closed = tuple(self.joint_ranges[list(GRIPPER_INDICES), 0])
+        self.q_open = tuple(self.joint_ranges[list(GRIPPER_INDICES), 1])
+        self.ee_ids = [model.body(f"{arm}_arm/{EE_BODY}").id for arm in ARMS]
+        self.base_ids = [model.body(f"{arm}_arm/base_link").id for arm in ARMS]
+        if (model.nq, model.nv, model.nu, model.ncam) != (19, 18, 12, 2):
+            raise ValueError("expected two six-joint arms, one free block and exactly two cameras")
+        for arm, base_id in zip(ARMS, self.base_ids):
+            position, yaw = BASE_POSES[arm]
+            expected_quat = [math.cos(yaw / 2), 0, 0, math.sin(yaw / 2)]
+            if (model.body_parentid[base_id] != 0 or model.body_jntnum[base_id] != 0
+                    or not np.allclose(model.body_pos[base_id], position, atol=1e-12, rtol=0)
+                    or not np.allclose(model.body_quat[base_id], expected_quat, atol=1e-12, rtol=0)):
+                raise ValueError(f"{arm} base pose differs from the fixed contract")
+        mast = model.body("head_camera_mast").id
+        if (model.body_parentid[mast] != 0 or model.body_jntnum[mast] != 0
+                or model.camera("external").bodyid[0] != 0 or model.camera("head").bodyid[0] != mast):
+            raise ValueError("external and head cameras must be fixed in world, independent of both arms")
         self.block_id = model.body("block").id
         self.block_geom_id = model.geom("block_geom").id
         self._state_spec = mj.mjtState.mjSTATE_INTEGRATION
@@ -247,9 +278,8 @@ class MuJoCoEnv:
             optical[:3, :3] = rotation.reshape(3, 3) @ flip
             optical[:3, 3] = cam.pos
             mount = np.eye(4)
-            if name == "wrist":
-                mount[:3, 3] = self.model.body("wrist_camera_mount_link").pos
-                result[name].update(mount_transform=mount.tolist(), optical_frame_offset=optical.tolist())
+            if name == "head":
+                mount[:3, 3] = self.model.body("head_camera_mast").pos
             result[name]["extrinsics"] = (mount @ optical).tolist()
             result[name]["calibration_source"] = "compiled MJCF; camera axes x right, y down, z forward"
         return result
@@ -264,7 +294,9 @@ class MuJoCoEnv:
         self._replay = []
         self._contacts = []
         self._initialized = True
-        data.qpos[self.qpos_indices] = [0, 0, 0, 0, 0, gripper_target(.5, self.q_closed, self.q_open)]
+        data.qpos[self.qpos_indices] = [0, 0, 0, 0, 0, 0] * 2
+        data.qpos[self.qpos_indices[list(GRIPPER_INDICES)]] = [
+            gripper_target(.5, closed, opened) for closed, opened in zip(self.q_closed, self.q_open)]
         # The seed-zero acceptance scene has no jitter or domain randomization.
         block_adr = model.joint("block_free").qposadr[0]
         jitter = np.zeros(2) if seed == 0 else np.random.default_rng(seed).uniform(-.005, .005, 2)
@@ -279,8 +311,14 @@ class MuJoCoEnv:
             "urdf_path": self.provenance["source_path"], "urdf_revision": self.provenance["revision"],
             "urdf_sha256": self.provenance["sha256"]["so101_new_calib.urdf"],
             "asset_sha256": self.provenance["sha256"], "joint_names": list(JOINT_ORDER),
+            "raw_urdf_joint_names": list(RAW_JOINT_ORDER),
+            "instances": {arm: {"namespace": f"{arm}_arm/", "urdf_sha256": self.provenance["sha256"]["so101_new_calib.urdf"]}
+                          for arm in ARMS},
+            "base_poses": {arm: {"position_m": list(pos), "yaw_rad": yaw} for arm, (pos, yaw) in BASE_POSES.items()},
+            "merge_method": MERGE_METHOD, "reachability_probe": self.reachability_probe(),
             "source_chain_endpoints": ["shoulder_link", "moving_jaw_so101_v1_link"],
-            "ee_body": EE_BODY, "ee_reference_frame": "base_link", "quaternion_order": "xyzw",
+            "ee_bodies": {arm: f"{arm}_arm/{EE_BODY}" for arm in ARMS},
+            "ee_reference_frames": {arm: f"{arm}_arm/base_link" for arm in ARMS}, "quaternion_order": "xyzw",
             "geometry": {"arm": "source collision meshes, MuJoCo convex hull contacts",
                          "table": "plane at z=0; visual half extents .5 x .4 m",
                          "block_size_m": [.03, .03, .03]},
@@ -295,7 +333,7 @@ class MuJoCoEnv:
                          "joint_damping": .1, "joint_armature": .01, "gravity_m_s2": [0, 0, -9.81],
                          "joint_ranges_rad": self.joint_ranges.tolist(),
                          "qpos_indices": self.qpos_indices.tolist(), "qvel_indices": self.qvel_indices.tolist(),
-                         "collision_exclusions": [["base_link", "shoulder_link"]],
+                         "collision_exclusions": [[f"{arm}_arm/base_link", f"{arm}_arm/shoulder_link"] for arm in ARMS],
                          "note": "integration fixture; actuator parameters are not hardware calibration"},
             "renderer": self.renderer_name, "graphics_backend": "EGL surfaceless / Mesa llvmpipe",
             "device_isolation": "Landlock read/write deny for GPU device nodes",
@@ -305,6 +343,40 @@ class MuJoCoEnv:
         self.info = EpisodeInfo(ENGINE_NAME, mj.__version__, seed, scene["urdf_revision"],
                                 scene, self._cameras(), self.q_closed, self.q_open)
         return self.info
+
+    def reachability_probe(self):
+        """FK/Jacobian witnesses within joint limits; no grasp or collision claim.
+
+        Solve each arm independently on scratch data. The live episode state,
+        solver history and render stamps are untouched.
+        """
+        mj, model = self.mj, self.model
+        target = np.asarray(BLOCK_POS)
+        result = {"target_world_m": target.tolist(), "scope": "kinematic reach only; not collision-free grasping"}
+        for i, arm in enumerate(ARMS):
+            data = mj.MjData(model)
+            ids = self.qpos_indices[6*i:6*i+5]
+            q = np.array([0., .5, .5, 0., 0.])
+            jac = np.zeros((3, model.nv))
+            for _ in range(100):
+                data.qpos[ids] = q
+                mj.mj_kinematics(model, data)
+                mj.mj_comPos(model, data)
+                error = target - data.xpos[self.ee_ids[i]]
+                if np.linalg.norm(error) < 1e-7:
+                    break
+                mj.mj_jacBody(model, data, jac, None, self.ee_ids[i])
+                j = jac[:, self.qvel_indices[6*i:6*i+5]]
+                delta = j.T @ np.linalg.solve(j @ j.T + np.eye(3) * 1e-5, error)
+                q = np.clip(q + np.clip(delta, -.15, .15),
+                            self.joint_ranges[6*i:6*i+5, 0] + .01,
+                            self.joint_ranges[6*i:6*i+5, 1] - .01)
+            distance = float(np.linalg.norm(error))
+            if distance > .001:
+                raise ValueError(f"{arm} arm cannot reach the shared block region: error={distance} m")
+            result[arm] = {"joint_position_rad": q.tolist(), "ee_world_m": data.xpos[self.ee_ids[i]].tolist(),
+                           "error_m": distance}
+        return result
 
     def _pose(self, data, body):
         return np.r_[data.xpos[body], data.xquat[body][[1, 2, 3, 0]]]
@@ -320,11 +392,13 @@ class MuJoCoEnv:
             mj.mj_contactForce(model, data, index, wrench)
             sign = 1 if contact.geom2 == self.block_geom_id else -1
             force += sign * contact.frame.reshape(3, 3).T @ wrench[:3]
-        base_rot = data.xmat[self.base_id].reshape(3, 3)
-        ee_rot = base_rot.T @ data.xmat[self.ee_id].reshape(3, 3)
-        quat = np.empty(4)
-        mj.mju_mat2Quat(quat, ee_rot.reshape(-1))
-        ee = np.r_[base_rot.T @ (data.xpos[self.ee_id] - data.xpos[self.base_id]), quat[[1, 2, 3, 0]]]
+        ee = []
+        for base_id, ee_id in zip(self.base_ids, self.ee_ids):
+            base_rot = data.xmat[base_id].reshape(3, 3)
+            ee_rot = base_rot.T @ data.xmat[ee_id].reshape(3, 3)
+            quat = np.empty(4)
+            mj.mju_mat2Quat(quat, ee_rot.reshape(-1))
+            ee.append(np.r_[base_rot.T @ (data.xpos[ee_id] - data.xpos[base_id]), quat[[1, 2, 3, 0]]])
         # Own a data copy: even an old state's lazy segmentation survives stepping/reset.
         frozen_data = mj.MjData(model)
         mj.mj_copyData(frozen_data, model, data)
@@ -340,8 +414,9 @@ class MuJoCoEnv:
             step_index=step, sim_time=step / PHYSICS_RATE_HZ,
             measured_joint_position_rad=data.qpos[self.qpos_indices],
             measured_joint_velocity_rad_s=data.qvel[self.qvel_indices],
-            measured_gripper_opening=gripper_opening(data.qpos[self.qpos_indices[-1]], self.q_closed, self.q_open),
-            measured_ee_pose=ee, object_pose_world=self._pose(data, self.block_id),
+            measured_gripper_opening=[gripper_opening(data.qpos[self.qpos_indices[j]], self.q_closed[i], self.q_open[i])
+                                      for i, j in enumerate(GRIPPER_INDICES)],
+            left_ee_pose=ee[0], right_ee_pose=ee[1], object_pose_world=self._pose(data, self.block_id),
             contact_forces=force, segmentation=segmentation, ncon=int(data.ncon),
             first_contact_dist=float(data.contact[0].dist) if data.ncon else None,
             first_contact_normal=tuple(data.contact[0].frame[:3]) if data.ncon else None,
@@ -395,13 +470,15 @@ class MuJoCoEnv:
             raise RuntimeError("reset before stepping")
         if not isinstance(n_steps, int) or n_steps < 1:
             raise ValueError("n_steps must be a positive integer")
-        targets = np.r_[action.joint_position_target_rad,
-                        gripper_target(action.gripper_opening, self.q_closed, self.q_open)]
+        targets = np.empty(12)
+        targets[list(ARM_JOINT_INDICES)] = action.joint_position_target_rad
+        targets[list(GRIPPER_INDICES)] = [gripper_target(v, closed, opened)
+                                        for v, closed, opened in zip(action.gripper_opening, self.q_closed, self.q_open)]
         if np.any(targets < self.joint_ranges[:, 0]) or np.any(targets > self.joint_ranges[:, 1]):
             raise ValueError("command outside actuator range; commands are never silently clipped")
         self.data.ctrl[self.actuator_ids] = targets
         self._last_command = {"command_joint_position_target_rad": action.joint_position_target_rad.tolist(),
-                              "command_gripper_opening": action.gripper_opening}
+                              "command_gripper_opening": action.gripper_opening.tolist()}
         self._frozen = None
         for _ in range(n_steps):
             self.mj.mj_step(self.model, self.data)
@@ -415,7 +492,7 @@ class MuJoCoEnv:
 
     def command_log_entry(self, action: Action) -> dict:
         expected = {"command_joint_position_target_rad": action.joint_position_target_rad.tolist(),
-                    "command_gripper_opening": action.gripper_opening}
+                    "command_gripper_opening": action.gripper_opening.tolist()}
         if self._last_command != expected:
             raise ValueError("requested command is not the most recently applied command")
         return expected
@@ -446,20 +523,23 @@ class MuJoCoEnv:
 
 
 def scripted_actions(joint_ranges, n_steps=150):
-    """Three arm sine sweeps and one gripper opening cycle, inside compiled limits.
+    """Opposite-phase three-joint sweeps and gripper cycles on both arms.
 
-    Keep 10% gripper margin: MuJoCo joint limits are soft constraints, so driving
-    exactly onto a limit can put measured normalized opening outside [0, 1].
+    The modest pan amplitude keeps the inward-facing hands separated. Keep
+    10% gripper margin because MuJoCo joint limits are soft constraints.
     """
     if n_steps < 2:
         raise ValueError("the sweep needs at least two steps")
     ranges = np.asarray(joint_ranges)
-    center = np.zeros(5)
-    amplitude = np.minimum([.55, .30, .25, 0., 0.], .25 * np.diff(ranges[:5], axis=1)[:, 0])
+    if ranges.shape != (12, 2):
+        raise ValueError("expected left-then-right joint ranges, shape (12, 2)")
+    amplitude = np.minimum([.08, .20, .16, 0., 0.] * 2,
+                           .25 * np.diff(ranges[list(ARM_JOINT_INDICES)], axis=1)[:, 0])
     for index in range(n_steps):
         phase = 2 * math.pi * index / (n_steps - 1)
-        yield Action(center + amplitude * np.sin([phase, 2 * phase, phase, 0, 0]),
-                     .5 - .4 * math.cos(phase))
+        wave = np.sin([phase, 2 * phase, phase, 0, 0])
+        yield Action(amplitude * np.r_[wave, -wave],
+                     [.5 - .4 * math.cos(phase), .5 + .4 * math.cos(phase)])
 
 
 def verify_replay(root, manifest, rows, states):
@@ -499,6 +579,15 @@ def verify_replay(root, manifest, rows, states):
         mj.mj_setState(env.model, env.data, vector, env._state_spec)
         if not math.isclose(env.data.time, index / PHYSICS_RATE_HZ, abs_tol=1e-12, rel_tol=0):
             raise ValueError(f"MuJoCo replay time differs at {index}")
+        if index > 0:
+            command = rows[index - 1]
+            targets = np.empty(12)
+            targets[list(ARM_JOINT_INDICES)] = command["command_joint_position_target_rad"]
+            targets[list(GRIPPER_INDICES)] = [
+                gripper_target(opening, closed, opened) for opening, closed, opened
+                in zip(command["command_gripper_opening"], env.q_closed, env.q_open)]
+            if not np.array_equal(env.data.ctrl[env.actuator_ids], targets):
+                raise ValueError(f"MuJoCo command/arm order replay differs at {index - 1}")
         mj.mj_forward(env.model, env.data)
         snapshot = env._snapshot(env.data, index)
         if state_checksum(snapshot) != recorded["state_checksum"]:

@@ -18,9 +18,9 @@ from PIL import Image
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from avatar_harness.contract import CAMERAS, JOINT_ORDER, TRANSITION_SCHEMA, gripper_target
+from avatar_harness.contract import ARMS, ARM_JOINT_INDICES, CAMERAS, JOINT_ORDER, TRANSITION_SCHEMA, gripper_target
 from avatar_harness.env_api import Action, canonical_state_bytes, state_checksum
-from avatar_harness.mock_env import MockEnv, render_snapshot, scripted_actions
+from avatar_harness.mock_env import MockEnv, fake_ee_pose, fake_ee_world, render_snapshot, scripted_actions
 from avatar_harness.recorder import EpisodeRecorder
 from avatar_harness.validate import validate_episode
 
@@ -77,7 +77,7 @@ class HarnessTests(unittest.TestCase):
         self._fails("file_counts")
 
     def test_extra_png_fails(self):
-        shutil.copyfile(self.episode / "images/wrist/0.png", self.episode / "images/wrist/999.png")
+        shutil.copyfile(self.episode / "images/head/0.png", self.episode / "images/head/999.png")
         self._fails("file_counts")
 
     def test_wrong_external_step_index_fails(self):
@@ -93,7 +93,7 @@ class HarnessTests(unittest.TestCase):
     def test_relabel_commands_as_measured_fails(self):
         def corrupt(rows):
             for row in rows:
-                row["command_joint_position_target_rad"] = row["measured_joint_position_rad"][:5]
+                row["command_joint_position_target_rad"] = [row["measured_joint_position_rad"][i] for i in ARM_JOINT_INDICES]
                 row["command_gripper_opening"] = row["measured_gripper_opening"]
         self._rewrite(corrupt)
         self._fails("command_vs_measured")
@@ -133,16 +133,16 @@ class HarnessTests(unittest.TestCase):
         path = self.episode / "transitions.parquet"
         table = pq.read_table(path)
         index = table.schema.get_field_index("command_joint_position_target_rad")
-        column = pa.array(table.column(index).to_pylist(), type=pa.list_(pa.float64(), 5))
+        column = pa.array(table.column(index).to_pylist(), type=pa.list_(pa.float64(), 10))
         pq.write_table(table.set_column(index, "command_joint_position_target_rad", column), path)
         self._fails("schema")
 
     def test_wrong_schema_shape_fails(self):
         path = self.episode / "transitions.parquet"
         table = pq.read_table(path)
-        index = table.schema.get_field_index("measured_ee_pose")
+        index = table.schema.get_field_index("left_ee_pose")
         column = pa.array([value[:6] for value in table.column(index).to_pylist()], type=pa.list_(pa.float32(), 6))
-        pq.write_table(table.set_column(index, "measured_ee_pose", column), path)
+        pq.write_table(table.set_column(index, "left_ee_pose", column), path)
         self._fails("schema")
 
     def test_privileged_transition_column_fails(self):
@@ -157,7 +157,7 @@ class HarnessTests(unittest.TestCase):
         self._fails("quarantine")
 
     def test_final_next_state_corruption_fails(self):
-        self._rewrite(lambda rows: rows[-1].update(next_measured_gripper_opening=0.125))
+        self._rewrite(lambda rows: rows[-1].update(next_measured_gripper_opening=[0.125, 0.5]))
         self._fails("state_chain")
 
     def test_bitwise_chain_rejects_signed_zero_change(self):
@@ -176,11 +176,11 @@ class HarnessTests(unittest.TestCase):
         self._fails("time_and_keys")
 
     def test_missing_segmentation_fails(self):
-        (self.episode / f"sim_only/segmentation/wrist/{self.count}.png").unlink()
+        (self.episode / f"sim_only/segmentation/head/{self.count}.png").unlink()
         self._fails("file_counts")
 
     def test_corrupt_state_checksum_fails(self):
-        self._rewrite(lambda rows: rows[4].update(wrist_state_checksum="0" * 64), "sim_only.parquet")
+        self._rewrite(lambda rows: rows[4].update(head_state_checksum="0" * 64), "sim_only.parquet")
         self._fails("state_checksums")
 
     def test_placeholder_extrinsics_fails(self):
@@ -202,13 +202,111 @@ class HarnessTests(unittest.TestCase):
         report = validate_episode(out)
         self.assertTrue(any(name == "motion" and not passed for name, passed, _ in report.checks))
 
+    def test_swapped_manifest_arm_order_fails(self):
+        path = self.episode / "manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["joint_order"] = manifest["joint_order"][6:] + manifest["joint_order"][:6]
+        path.write_text(json.dumps(manifest))
+        self._fails("manifest")
+
+    def test_swapped_measured_arm_order_fails(self):
+        def corrupt(rows):
+            for row in rows:
+                q = row["measured_joint_position_rad"]
+                row["measured_joint_position_rad"] = q[6:] + q[:6]
+        self._rewrite(corrupt)
+        self._fails("state_chain")
+
+    def test_swapped_command_arm_order_fails(self):
+        # Correct schema and labels cannot rescue commands routed to the wrong arm.
+        def corrupt(rows):
+            for row in rows:
+                q = row["command_joint_position_target_rad"]
+                row["command_joint_position_target_rad"] = q[5:] + q[:5]
+        self._rewrite(corrupt)
+        self._fails("image_content")
+
+    def test_single_arm_only_motion_fails(self):
+        for moving in range(2):
+            with self.subTest(moving=ARMS[moving]):
+                actions = []
+                for action in scripted_actions(32):
+                    targets = np.zeros(10)
+                    targets[5*moving:5*moving+5] = action.joint_position_target_rad[5*moving:5*moving+5]
+                    actions.append(Action(targets, action.gripper_opening))
+                out = Path(self.work.name) / f"only-{moving}"
+                EpisodeRecorder(MockEnv(), out, {}).record(actions)
+                report = validate_episode(out)
+                self.assertFalse(report.passed)
+                self.assertTrue(any(name == "motion" and not ok for name, ok, _ in report.checks), report.format())
+                self.assertTrue(any(name == "image_content" and ok for name, ok, _ in report.checks), report.format())
+
+    def test_swapped_gripper_commands_fail(self):
+        self._rewrite(lambda rows: [row.update(command_gripper_opening=row["command_gripper_opening"][::-1])
+                                    for row in rows])
+        self._fails("image_content")
+
+    def test_gripper_only_motion_fails(self):
+        out = Path(self.work.name) / "grippers-only"
+        EpisodeRecorder(MockEnv(), out, {}).record(
+            Action(np.zeros(10), action.gripper_opening) for action in scripted_actions(32))
+        report = validate_episode(out)
+        self.assertTrue(any(name == "motion" and not ok for name, ok, _ in report.checks), report.format())
+
+    def test_swapped_base_identities_fail(self):
+        path = self.episode / "manifest.json"
+        manifest = json.loads(path.read_text())
+        bases = manifest["scene"]["base_poses"]
+        bases["left"], bases["right"] = bases["right"], bases["left"]
+        path.write_text(json.dumps(manifest))
+        self._fails("manifest")
+
+    def test_wrong_head_step_index_fails(self):
+        self._rewrite(lambda rows: rows[4].update(head_step_index=3))
+        self._fails("step_alignment")
+
+    def test_wrong_right_ee_pose_fails(self):
+        self._rewrite(lambda rows: rows[4].update(right_ee_pose=rows[4]["left_ee_pose"]))
+        self._fails("state_chain")
+
+    def test_wrong_right_gripper_mapping_fails(self):
+        path = self.episode / "manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["gripper_mapping"]["right"]["q_open"] = 2.0
+        path.write_text(json.dumps(manifest))
+        self._fails("measured_values")
+
+    def test_extra_camera_fails(self):
+        path = self.episode / "manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["cameras"]["third"] = manifest["cameras"]["head"]
+        path.write_text(json.dumps(manifest))
+        self._fails("manifest")
+
+    def test_training_loader_dimensions_and_action_order(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("train_smoke", Path(__file__).resolve().parents[1] / "scripts/train_smoke.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        ext, head, proprio, action = module.load_episode(self.episode)
+        self.assertEqual(ext.shape, (self.count, 240, 320, 3))
+        self.assertEqual(head.shape, ext.shape)
+        self.assertEqual(proprio.shape, (self.count, 14))
+        self.assertEqual(action.shape, (self.count, 12))
+        rows = pq.read_table(self.episode / "transitions.parquet").to_pylist()
+        np.testing.assert_array_equal(proprio[4], rows[4]["measured_joint_position_rad"] + rows[4]["measured_gripper_opening"])
+        np.testing.assert_array_equal(action[4], rows[4]["command_joint_position_target_rad"] + rows[4]["command_gripper_opening"])
+        # Policy loader must not read even an unreadable privileged companion.
+        (self.episode / "sim_only.parquet").write_bytes(b"unreadable privileged data")
+        module.load_episode(self.episode)
+
     def test_cli_exit_codes(self):
         environment = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
         command = [sys.executable, "-m", "avatar_harness.validate", str(self.episode)]
         good = subprocess.run(command, env=environment, text=True, capture_output=True)
         self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
         self.assertTrue(good.stdout.endswith("PASS\n"))
-        (self.episode / "images/wrist/0.png").unlink()
+        (self.episode / "images/head/0.png").unlink()
         bad = subprocess.run(command, env=environment, text=True, capture_output=True)
         self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
         self.assertTrue(bad.stdout.endswith("FAIL\n"))
@@ -238,10 +336,10 @@ class EngineBoundaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             state.measured_joint_position_rad.setflags(write=True)
         external = env.render("external")
-        wrist = env.render("wrist")
-        self.assertFalse(np.array_equal(external, wrist))
+        head = env.render("head")
+        self.assertFalse(np.array_equal(external, head))
         self.assertEqual(state_checksum(env.get_state()), checksum)
-        action = Action(np.ones(5), 1.0)
+        action = Action(np.ones(10), [1.0, 1.0])
         env.step(action, 1)
         with self.assertRaises(RuntimeError):
             env.render("external")
@@ -252,7 +350,28 @@ class EngineBoundaryTests(unittest.TestCase):
         self.assertTrue(np.all(next_state.measured_joint_position_rad[:5] < 1))
         self.assertEqual(state_checksum(state), checksum)
         np.testing.assert_array_equal(state.segmentation("external"), before)
-        self.assertEqual(env.command_log_entry(action)["command_joint_position_target_rad"], [1.0] * 5)
+        self.assertEqual(env.command_log_entry(action)["command_joint_position_target_rad"], [1.0] * 10)
+
+    def test_dual_arm_fk_and_independent_control(self):
+        env = MockEnv()
+        env.reset(0)
+        state = env.get_state()
+        env.step(Action([.4, .3, .2, 0, 0] + [0] * 5, [.1, .9]), 3)
+        moved = env.get_state()
+        self.assertFalse(np.array_equal(moved.left_ee_pose, state.left_ee_pose))
+        np.testing.assert_array_equal(moved.right_ee_pose, state.right_ee_pose)
+        np.testing.assert_array_equal(moved.left_ee_pose, fake_ee_pose(moved.measured_joint_position_rad[:6]))
+        np.testing.assert_array_equal(moved.right_ee_pose, fake_ee_pose(moved.measured_joint_position_rad[6:]))
+        self.assertLess(moved.measured_gripper_opening[0], .5)
+        self.assertGreater(moved.measured_gripper_opening[1], .5)
+
+    def test_single_arm_actions_rejected(self):
+        with self.assertRaises(ValueError):
+            Action(np.ones(5), [1, 1])
+        with self.assertRaises(ValueError):
+            Action(np.ones(10), 1)
+        with self.assertRaises(ValueError):
+            Action(np.ones(10), [0, 1.1])
 
     def test_privileged_state_never_encoded_in_rgb(self):
         env = MockEnv()
@@ -266,14 +385,15 @@ class EngineBoundaryTests(unittest.TestCase):
     def test_checksum_canonicalizes_stored_float32(self):
         env = MockEnv()
         env.reset(0)
-        state = replace(env.get_state(), measured_gripper_opening=0.1)
+        state = replace(env.get_state(), measured_gripper_opening=[0.1, 0.2])
         values = np.frombuffer(canonical_state_bytes(state), dtype="<f8")
-        self.assertEqual(values[14], float(np.float32(0.1)))
+        self.assertEqual(values[26], float(np.float32(0.1)))
         self.assertEqual(state_checksum(state), hashlib.sha256(values.tobytes()).hexdigest())
 
     def test_object_falls_and_recorder_stops_with_final_state(self):
-        env = MockEnv(table_half_extents=(0.5, 0.015), object_xy=(0.34, 0.014))
-        action = Action([0.8, 0, 0, 0, 0], 0.5)
+        left_tip = fake_ee_world(np.zeros(6), "left")
+        env = MockEnv(table_half_extents=(0.5, float(left_tip[1]) + 0.001), object_xy=left_tip[:2])
+        action = Action([0.8, 0, 0, 0, 0] + [0] * 5, [0.5, 0.5])
         with tempfile.TemporaryDirectory() as directory:
             EpisodeRecorder(env, directory, {}).record([action] * 10)
             rows = pq.read_table(Path(directory) / "transitions.parquet").to_pylist()
@@ -289,7 +409,7 @@ class EngineBoundaryTests(unittest.TestCase):
         class AdvancingEnv(MockEnv):
             def render(self, camera_name):
                 pixels = super().render(camera_name)
-                self.step(Action(np.ones(5), 1), 1)
+                self.step(Action(np.ones(10), [1, 1]), 1)
                 return pixels
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "changed the frozen"):
@@ -311,7 +431,7 @@ class EngineBoundaryTests(unittest.TestCase):
             self.assertTrue(validate_episode(directory).passed)
 
     def test_mapping_and_frozen_contract_constants(self):
-        self.assertEqual(len(JOINT_ORDER), 6)
+        self.assertEqual(len(JOINT_ORDER), 12)
         self.assertEqual(gripper_target(0.25, -0.2, 0.6), 0.0)
         with self.assertRaises(ValueError):
             gripper_target(1.1, 0, 1)

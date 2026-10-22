@@ -5,9 +5,22 @@ from types import MappingProxyType
 import numpy as np
 import pyarrow as pa
 
-JOINT_ORDER = (
+CONTRACT_REVISION = "B"
+ARMS = ("left", "right")
+RAW_JOINT_ORDER = (
     "shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper",
 )
+JOINT_ORDER = tuple(f"{arm}_arm/{joint}" for arm in ARMS for joint in RAW_JOINT_ORDER)
+ARM_JOINT_INDICES = (0, 1, 2, 3, 4, 6, 7, 8, 9, 10)
+GRIPPER_INDICES = (5, 11)
+COMMAND_JOINT_ORDER = tuple(JOINT_ORDER[i] for i in ARM_JOINT_INDICES)
+BASE_POSES = MappingProxyType({
+    "left": ((-0.24, -0.12, 0.0), np.pi / 3),
+    "right": ((0.24, -0.12, 0.0), 2 * np.pi / 3),
+})
+BLOCK_POS = (0.0, 0.08, 0.015)
+EXTERNAL_POS, EXTERNAL_LOOKAT = (0.72, -0.70, 0.52), (0.16, 0.0, 0.15)
+HEAD_POS, HEAD_LOOKAT = (0.0, -0.50, 0.65), (0.0, 0.05, 0.10)
 PHYSICS_RATE_HZ = 30
 PHYSICS_DT_S = 1 / PHYSICS_RATE_HZ
 ACTION_HOLD_STEPS = 1
@@ -22,22 +35,36 @@ _INTRINSICS = {
     "channels": "RGB",
 }
 INTRINSICS = MappingProxyType(_INTRINSICS)
+
+
+def camera_transform(position, lookat):
+    """Optical x-right/y-down/z-forward pose in world coordinates."""
+    forward = np.asarray(lookat, dtype=float) - position
+    forward /= np.linalg.norm(forward)
+    right = np.cross(forward, [0, 0, 1])
+    right /= np.linalg.norm(right)
+    transform = np.eye(4)
+    transform[:3, :3] = np.column_stack((right, np.cross(forward, right), forward))
+    transform[:3, 3] = position
+    return tuple(tuple(float(v) for v in row) for row in transform)
+
+
 CAMERAS = MappingProxyType({
     "external": MappingProxyType({
         **_INTRINSICS, "identity": "fixed", "parent_frame": "world",
-        # Resolved numerically at runtime by mujoco_env.py from the compiled
-        # model; canonical values recorded in docs/v0.1-experiment-contract.md.
+        "extrinsics": camera_transform(EXTERNAL_POS, EXTERNAL_LOOKAT),
     }),
-    "wrist": MappingProxyType({
-        **_INTRINSICS, "identity": "wrist", "parent_frame": "gripper_link",
-        "mount_link": "wrist_camera_mount_link",  # extrinsics resolved at runtime, see external note
+    "head": MappingProxyType({
+        **_INTRINSICS, "identity": "head", "parent_frame": "world",
+        "mount_link": "head_camera_mast",
+        "extrinsics": camera_transform(HEAD_POS, HEAD_LOOKAT),
     }),
 })
 
 # Fields a future policy input loader may read (actions are training targets).
 POLICY_INPUT_FIELDS = (
-    "external_path", "wrist_path", "measured_joint_position_rad",
-    "measured_joint_velocity_rad_s", "measured_gripper_opening", "measured_ee_pose",
+    "external_path", "head_path", "measured_joint_position_rad",
+    "measured_joint_velocity_rad_s", "measured_gripper_opening", "left_ee_pose", "right_ee_pose",
 )
 
 
@@ -61,17 +88,17 @@ def _schema(fields):
 
 
 F32 = pa.float32()
-V5, V6, V7 = (pa.list_(F32, n) for n in (5, 6, 7))
+V2, V7, V10, V12 = (pa.list_(F32, n) for n in (2, 7, 10, 12))
 TRANSITION_SCHEMA = _schema([
     ("episode_id", pa.string()), ("step_index", pa.int64()), ("sim_time", pa.float64()),
-    ("external_path", pa.string()), ("wrist_path", pa.string()),
-    ("external_step_index", pa.int64()), ("wrist_step_index", pa.int64()),
-    ("command_joint_position_target_rad", V5), ("command_gripper_opening", F32),
-    ("measured_joint_position_rad", V6), ("measured_joint_velocity_rad_s", V6),
-    ("measured_gripper_opening", F32), ("measured_ee_pose", V7),
+    ("external_path", pa.string()), ("head_path", pa.string()),
+    ("external_step_index", pa.int64()), ("head_step_index", pa.int64()),
+    ("command_joint_position_target_rad", V10), ("command_gripper_opening", V2),
+    ("measured_joint_position_rad", V12), ("measured_joint_velocity_rad_s", V12),
+    ("measured_gripper_opening", V2), ("left_ee_pose", V7), ("right_ee_pose", V7),
     ("next_step_index", pa.int64()), ("next_sim_time", pa.float64()),
-    ("next_measured_joint_position_rad", V6), ("next_measured_joint_velocity_rad_s", V6),
-    ("next_measured_gripper_opening", F32),
+    ("next_measured_joint_position_rad", V12), ("next_measured_joint_velocity_rad_s", V12),
+    ("next_measured_gripper_opening", V2),
 ])
 
 # Contract leaves the companion's numeric types open. Use float32[7] pose
@@ -84,13 +111,13 @@ SIM_ONLY_SCHEMA = _schema([
     ("segmentation_paths", pa.struct([
         pa.field(camera, pa.string(), nullable=False) for camera in CAMERAS
     ])),
-    ("measured_joint_position_rad", V6), ("measured_joint_velocity_rad_s", V6),
-    ("measured_gripper_opening", F32), ("measured_ee_pose", V7),
+    ("measured_joint_position_rad", V12), ("measured_joint_velocity_rad_s", V12),
+    ("measured_gripper_opening", V2), ("left_ee_pose", V7), ("right_ee_pose", V7),
     ("terminated", pa.bool_()), ("state_checksum", pa.string()),
     # No RGB render of the terminal next state: its per-render stamps are null.
 ])
 SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("external_state_checksum", pa.string()))
-SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("wrist_state_checksum", pa.string()))
+SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("head_state_checksum", pa.string()))
 SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("external_rgb_sha256", pa.string()))
-SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("wrist_rgb_sha256", pa.string()))
+SIM_ONLY_SCHEMA = SIM_ONLY_SCHEMA.append(pa.field("head_rgb_sha256", pa.string()))
 SIM_ONLY_FIELDS = tuple(SIM_ONLY_SCHEMA.names)

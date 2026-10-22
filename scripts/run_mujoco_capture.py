@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture and reload one SO-101 episode using CPU physics and software EGL.
+"""Capture and reload one dual-arm SO-101 episode using CPU physics and software EGL.
 
     MUJOCO_GL=egl .venv-sim/bin/python scripts/run_mujoco_capture.py /tmp/mujoco_ep1
 
@@ -14,8 +14,9 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from avatar_harness.contract import ARMS, BASE_POSES, BLOCK_POS, HEAD_POS, HEAD_LOOKAT
 from avatar_harness.mujoco_env import (EE_BODY, EXTERNAL_LOOKAT, EXTERNAL_POS,
-                                       WRIST_EULER, WRIST_POS, MuJoCoEnv, scripted_actions)
+                                       MERGE_METHOD, MuJoCoEnv, scripted_actions)
 from avatar_harness.recorder import EpisodeRecorder
 from avatar_harness.validate import validate_episode
 
@@ -52,18 +53,22 @@ def main(argv=None) -> int:
           f"elapsed={benchmark['elapsed_s']:.3f} s; "
           f"frames/sec={benchmark['frames_per_sec']:.3f}; steps/sec={benchmark['steps_per_sec']:.3f}", flush=True)
     if report.passed:
-        print("=== BEGIN CAMERA-TRANSFORM CONTRACT AMENDMENT ===")
-        print("Units: meters/radians; extrinsics map camera x-right/y-down/z-forward to parent.")
-        print(f"external parent=world pos={list(EXTERNAL_POS)} lookat={list(EXTERNAL_LOOKAT)}")
-        print(f"wrist parent={EE_BODY} pos={list(WRIST_POS)} mujoco_xyz_euler_rad={list(WRIST_EULER)}")
-        print("Wrist Euler describes MuJoCo x-right/y-up/-z-forward; the optical-axis flip is included below.")
+        print("BEGIN DUAL-ARM AMENDMENT")
+        print("Rev B, 2026-10-21; units: meters/radians; optical axes: x-right/y-down/z-forward.")
+        for i, arm in enumerate(ARMS):
+            position, yaw = BASE_POSES[arm]
+            print(f"{arm} base_link world position={list(position)} yaw_rad={yaw}")
+            print(f"{arm} gripper range_rad=[{env.q_closed[i]}, {env.q_open[i]}]; "
+                  f"q_closed={env.q_closed[i]}; q_open={env.q_open[i]}")
+        print(f"shared block center_world_m={list(BLOCK_POS)}")
+        print(f"head identity=head parent=world pos={list(HEAD_POS)} lookat={list(HEAD_LOOKAT)}")
         for camera, definition in env.info.cameras.items():
-            print(f"{camera} camera_to_parent={json.dumps(definition['extrinsics'])}")
-        print(f"EE body={EE_BODY}; reference_frame=base_link; quaternion=xyzw")
-        print(f"gripper joint range_rad=[{env.q_closed}, {env.q_open}]; "
-              f"q_closed={env.q_closed}; q_open={env.q_open}")
-        print(f"URDF sha256={env.info.scene['urdf_sha256']}")
-        print("=== END CAMERA-TRANSFORM CONTRACT AMENDMENT ===", flush=True)
+            print(f"{camera} camera_to_world={json.dumps(definition['extrinsics'])}")
+        print(f"EE body per arm={EE_BODY}; reference_frame=that arm's base_link; quaternion=xyzw")
+        print(f"merge_method={MERGE_METHOD}")
+        print(f"FK reach probe={json.dumps(env.info.scene['reachability_probe'])}")
+        print(f"URDF sha256 (both arms)={env.info.scene['urdf_sha256']}")
+        print("END DUAL-ARM AMENDMENT", flush=True)
     return 0 if report.passed else 1
 
 

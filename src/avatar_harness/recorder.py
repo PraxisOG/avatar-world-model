@@ -15,8 +15,9 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from . import __version__
-from .contract import (ACTION_HOLD_STEPS, CAMERAS, GRIPPER_FORMULA, IMAGE_SHAPE,
-                       JOINT_ORDER, PHYSICS_DT_S, PHYSICS_RATE_HZ, POLICY_INPUT_FIELDS,
+from .contract import (ACTION_HOLD_STEPS, ARMS, CAMERAS, COMMAND_JOINT_ORDER,
+                       CONTRACT_REVISION, GRIPPER_FORMULA, IMAGE_SHAPE,
+                       JOINT_ORDER, RAW_JOINT_ORDER, PHYSICS_DT_S, PHYSICS_RATE_HZ, POLICY_INPUT_FIELDS,
                        SIM_ONLY_FIELDS, SIM_ONLY_SCHEMA, TRANSITION_SCHEMA)
 from .env_api import Action, SimEnv, SimState, state_checksum
 
@@ -25,8 +26,9 @@ def _measured(state):
     return {
         "measured_joint_position_rad": state.measured_joint_position_rad.tolist(),
         "measured_joint_velocity_rad_s": state.measured_joint_velocity_rad_s.tolist(),
-        "measured_gripper_opening": state.measured_gripper_opening,
-        "measured_ee_pose": state.measured_ee_pose.tolist(),
+        "measured_gripper_opening": state.measured_gripper_opening.tolist(),
+        "left_ee_pose": state.left_ee_pose.tolist(),
+        "right_ee_pose": state.right_ee_pose.tolist(),
     }
 
 
@@ -140,10 +142,10 @@ class EpisodeRecorder:
             # Read engine-side commands; never reconstruct them from measured state.
             actual = Action(sent["command_joint_position_target_rad"], sent["command_gripper_opening"])
             if (actual.joint_position_target_rad.tolist() != list(sent["command_joint_position_target_rad"])
-                    or actual.gripper_opening != sent["command_gripper_opening"]):
+                    or actual.gripper_opening.tolist() != list(sent["command_gripper_opening"])):
                 raise ValueError("engine commands must be float32-representable at the controller boundary")
             row["command_joint_position_target_rad"] = actual.joint_position_target_rad.tolist()
-            row["command_gripper_opening"] = actual.gripper_opening
+            row["command_gripper_opening"] = actual.gripper_opening.tolist()
             next_state = self.env.get_state()
             if (next_state.step_index != frozen.step_index + ACTION_HOLD_STEPS
                     or next_state.sim_time != next_state.step_index / PHYSICS_RATE_HZ):
@@ -152,7 +154,7 @@ class EpisodeRecorder:
                 "next_step_index": next_state.step_index, "next_sim_time": next_state.sim_time,
                 "next_measured_joint_position_rad": next_state.measured_joint_position_rad.tolist(),
                 "next_measured_joint_velocity_rad_s": next_state.measured_joint_velocity_rad_s.tolist(),
-                "next_measured_gripper_opening": next_state.measured_gripper_opening,
+                "next_measured_gripper_opening": next_state.measured_gripper_opening.tolist(),
             })
             transitions.append(row)
             privileged.append(self._privileged_row(next_state, episode_id))
@@ -168,9 +170,13 @@ class EpisodeRecorder:
                        self.out_dir / "sim_only.parquet", compression="NONE")
         manifest = {
             "episode_id": episode_id, "seed": seed, "scene": info.scene,
+            "contract_revision": CONTRACT_REVISION,
+            "raw_urdf_joint_order": list(RAW_JOINT_ORDER),
+            "command_joint_order": list(COMMAND_JOINT_ORDER), "gripper_order": list(ARMS),
             "source_revision": info.source_revision, "joint_order": list(JOINT_ORDER),
-            "gripper_mapping": {"formula": GRIPPER_FORMULA, "q_closed": info.q_closed,
-                                "q_open": info.q_open, "units": "rad"},
+            "gripper_mapping": {arm: {"formula": GRIPPER_FORMULA, "q_closed": info.q_closed[i],
+                                      "q_open": info.q_open[i], "units": "rad"}
+                                for i, arm in enumerate(ARMS)},
             "physics_rate_hz": PHYSICS_RATE_HZ, "physics_dt_s": PHYSICS_DT_S,
             "N": ACTION_HOLD_STEPS, "action_hold_steps": ACTION_HOLD_STEPS,
             "control_interval_s": ACTION_HOLD_STEPS * PHYSICS_DT_S, "cameras": info.cameras,
@@ -192,8 +198,8 @@ class EpisodeRecorder:
                 "segmentation_encoding": "int32 IDs losslessly stored as uint16 grayscale PNG; range 0..65535",
                 "state_checksum_encoding": (
                     "SHA-256; float64 little-endian; stored float32 promoted to float64; order: "
-                    "step_index, sim_time, measured_joint_position_rad[6], measured_joint_velocity_rad_s[6], "
-                    "measured_gripper_opening, measured_ee_pose[7], object_pose_world[7], contact_forces[3], "
+                    "step_index, sim_time, measured_joint_position_rad[12], measured_joint_velocity_rad_s[12], "
+                    "measured_gripper_opening[2], left_ee_pose[7], right_ee_pose[7], object_pose_world[7], contact_forces[3], "
                     "terminated(0/1); segmentation callable excluded; per-render stamps null at final next state"
                 )},
         }
