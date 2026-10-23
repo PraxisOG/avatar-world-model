@@ -12,6 +12,14 @@ Phase 1 uses recorded human motion on a fixed-base upper-body avatar, with a
 moving head camera and fixed external camera. A contact-free motion is sufficient.
 The previous SO-101, wrist-camera, and block-pushing specification is superseded.
 
+Preferred prototype: Reachy 2 with Shadow Hands in MuJoCo. Validate one arm/hand
+first, then both sides and head. Articulated finger replay is in Phase 1;
+object contact and dynamic grasping remain deferred. Mark direct joint replay
+as kinematic rather than claiming motor-control validation.
+
+[Codex TXT handoff](Avatar_Codex_Handoff.txt) contains the detailed integration
+checks, source links, data inspection steps, and evidence gates.
+
 ## Historical reports
 
 | Document | How to use it now |
