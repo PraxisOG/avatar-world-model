@@ -199,10 +199,16 @@ side-by-side videos. Finite loss alone is not evidence of success.
 
 10. COMPUTE AND SCOPE
 
-Target machine: Moe, four AMD V620 GPUs; historical operating cap 150 W each.
-Start with one GPU for training verification. Measure installed runtime/rendering
-support and actual throughput. No assumptions about CUDA-only packages working,
-overnight training, or access to Moe from another execution environment.
+Initial target: user's Linux Mint gaming desktop, modern Ryzen CPU, 32 GB DDR5,
+and Radeon RX 6800. Inspect exact Mint version, Python environment, graphics
+drivers, and display setup locally. First verify a basic MuJoCo viewer and camera
+rendering before assembling the combined model.
+Codex can create a configurable local dataset directory and obtain a small sample
+after checking access requirements. Keep recordings and generated data out of Git.
+
+Moe (four AMD V620 GPUs) is a possible later training machine, not a Phase 1
+dependency. Measure compatibility and throughput before choosing training hardware.
+Do not assume CUDA packages work or promise overnight training.
 
 Phase 1 does not require physics-accurate grasping, objects, walking, balance,
 photorealism, physical hardware, RL, or a large model.
@@ -219,6 +225,50 @@ an explicit data/versioning plan calls for them.
 If blocked, report the exact dependency, missing channel, access requirement,
 or model incompatibility. Do not substitute fabricated data and call the gate done.
 Stop after presenting the completed Phase 1 evidence for review before scaling.
+
+12. LIVE DESKTOP DASHBOARD — REQUIRED PHASE 1 DELIVERABLE
+
+The user wants to watch the simulation as it works, rather than watch a terminal
+log. Provide a lightweight dashboard accessible on the Linux Mint desktop.
+A local browser UI served on localhost is an acceptable default; choose the
+simplest implementation that integrates with the replay process.
+
+Build the basic viewer early, with the one-arm/one-hand integration probe, and
+extend it as the full scene becomes available. Do not postpone visualization
+until the first training run.
+
+Required presentation:
+- Large side-by-side external-camera and head-mounted POV panes.
+- Live updates from actual simulation/replay output, not prerecorded demo loops.
+- Clearly identify live replay, paused state, and saved-episode playback.
+- During the one-arm probe, label POV unavailable until the head camera exists;
+  do not present a substitute camera as true head POV.
+- Compact status: current stage, recording/episode name, frame/time progress,
+  preview FPS, recording status, and concise warnings/errors.
+- When measured, show head/hand/fingertip tracking errors and limit violations;
+  unavailable metrics must be marked unavailable, not fabricated.
+- Play/pause, single-step, restart current replay, and playback-speed controls.
+  Speed changes affect wall-clock playback, not source timestamps or saved labels.
+- A short expandable event log for details, without overwhelming the camera views.
+
+Engineering constraints:
+- Display external/POV images from the same capture step; show their timestamp.
+- Reuse captured frames rather than creating an independent simulation state.
+- Decouple UI refresh from capture so a slow dashboard does not corrupt alignment
+  or drop required dataset frames. Preview frames may be skipped as matched pairs.
+- Keep preview buffers bounded; show stale/disconnected status if updates stop.
+- Keep dataset generation usable without the dashboard (headless mode).
+- Provide one documented launch command that starts the local dashboard and
+  replay workflow, and prints its address. No cloud service or login required.
+- This is a monitoring/playback interface, not a separate major web-app project.
+  No remote access, elaborate editing tools, or training-control suite required.
+
+Acceptance:
+On the Mint desktop, the user can watch synchronized POV/external views during
+a real replay, pause/step/restart it, and see progress or an actionable error.
+Verify playback controls preserve saved time alignment and closing the viewer
+does not silently destroy a capture. Report actual refresh performance; do not
+claim an unmeasured real-time frame rate.
 
 This document is a working plan for the future implementation session.
 Publishing the plan does not mean any implementation or training has occurred.
