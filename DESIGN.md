@@ -20,9 +20,12 @@ paired examples, then test entirely unseen source movements in the same scene.
 Inspect a small source-data sample, build one human-proportioned upper body with
 a fixed base, map recorded head and both hand poses onto its joints, and record
 one short replay from a fixed external camera and a moving head-mounted camera.
-Use simple fixed hand geometry and movements without object contact.
-No block-pushing policy, SO-101 hardware, walking, grasping, or finger control is
-required. A fixed base limits admissible head translation and arm reach; reject
+Include articulated finger motion, initially without object contact.
+The preferred prototype is Reachy 2 with left/right Shadow Hands in MuJoCo.
+First validate one arm and one hand, then add the second side and head.
+The combined model is untested; verify attachment frames, joint coupling, limits,
+licenses, collisions, and the wrist boundary rather than duplicating wrist joints.
+No block-pushing policy, SO-101 hardware, walking, or physical grasping is required. A fixed base limits admissible head translation and arm reach; reject
 or explicitly document unsupported motion rather than silently changing labels.
 
 See [the roadmap](docs/first-training-roadmap.md) and
@@ -36,7 +39,11 @@ The original egocentric video is a reference; synthetic POV is not expected to
 reproduce its original objects, textures, or lighting.
 
 Retargeted joint targets are one chosen embodiment-specific solution.
-Record commanded targets and actual simulated joint state separately.
+Start with kinematic replay and label episodes `replay_mode=kinematic`.
+Record source head/hand/finger poses, solved configurations, and simulator-read
+state separately. Assigned configurations matching read state are not evidence
+of motor tracking. In dynamic mode, record motor targets and actual state separately.
+Do not fabricate force or torque labels from kinematic replay.
 Neither inferred human joints nor retargeted commands are uniquely determined
 ground truth about the original human's motor commands.
 
@@ -54,7 +61,7 @@ or continuous take, group those together too.
 
 Use a modest image encoder and temporal model. Overfit one short sequence first,
 then train a pilot dataset and evaluate held-out movements. Compare joint error,
-head/hand pose error, jitter, limit violations, and rendered POV against reference.
+head/hand and fingertip pose error, jitter, limit violations, and rendered POV against reference.
 Compare constant-pose and nearest-training-motion baselines.
 A small loss or attractive image alone is not evidence of useful reconstruction.
 
@@ -80,8 +87,9 @@ model RL are deferred until evidence supports them.
 Moe has four AMD V620 GPUs, historically operated at 150 W per GPU.
 Begin with one GPU for training verification. Benchmark actual software and
 rendering support; do not promise overnight training or assume CUDA compatibility.
-Genesis and MuJoCo remain candidates, not validated installations.
-Select the simplest stack that passes the replay and dual-camera probe.
+MuJoCo is the first probe target for the existing Reachy and Shadow assets,
+not a validated installation. Genesis remains an alternative if needed.
+See [the Codex handoff](docs/Avatar_Codex_Handoff.txt) for sources and integration checks.
 
 EgoDex is an existing candidate in the reference notes, not a verified selection.
 Inspect actual pose fields, calibration, timestamps, units, access conditions,
