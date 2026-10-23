@@ -1,106 +1,97 @@
-# Avatar World Model — paired-view robot learning pipeline
+# Avatar World Model
 
-Origin: drive-home conversation, 2026-10-20 (Winston + Bella).
+Updated 2026-10-22. This is the current design source of truth.
+Implementation status: planning; no replay pipeline or training result has been demonstrated.
 
-## Thesis (v2, 2026-10-20): data-first
+## Goal
 
-**The deliverable is the dataset and the capture pipeline.** Models churn;
-paired observation-action data in an open, standard format (LeRobot)
-appreciates regardless of which architecture wins. Prior art (Mirror
-Learning, EgoExo-WM, EgoMimic, EgoDemoGen) confirms every architecture's
-real bottleneck is ground-truth paired data, not model quality.
+Build a dataset generator that takes external human video, eventually including
+YouTube footage, and estimates corresponding motor kinematics and first-person
+video. The generated examples should support downstream robot learning.
+Robot policy training is a downstream evaluation, not the first deliverable.
 
-Ordering that follows:
-1. Build the paired-view capture factory (sim avatar, eye-cam + external
-   cam, joint-true labels, LeRobot export, clean provenance).
-2. Publish data + pipeline openly. That is the contribution.
-3. The world model is downstream proof: it exists to demonstrate the data
-   is good, and to run the pixel-head vs latent-head shootout on identical
-   data. The cooking benchmark scores data quality as much as model quality.
+The immediate route is to replay existing egocentric recordings with tracked head
+and hands on a simulated body. Render synchronized external and head-mounted
+camera views and record the body's joint motion. Train a translator on these
+paired examples, then test entirely unseen source movements in the same scene.
 
-Why data-first is the honest difficulty ordering: building a rigorous
-capture pipeline is engineering with a known ceiling; training a genuinely
-good world model is research with an unknown one. Betting on the pipeline
-means shipping value even if the model disappoints.
+## Phase 1: one faithful replay
 
-## Thesis (v1, original): world-model-first
+Inspect a small source-data sample, build one human-proportioned upper body with
+a fixed base, map recorded head and both hand poses onto its joints, and record
+one short replay from a fixed external camera and a moving head-mounted camera.
+Use simple fixed hand geometry and movements without object contact.
+No block-pushing policy, SO-101 hardware, walking, grasping, or finger control is
+required. A fixed base limits admissible head translation and arm reach; reject
+or explicitly document unsupported motion rather than silently changing labels.
 
-Hardware is becoming as valuable as the software that runs on it, but the
-scarce resource in robotics is *paired data*: external observations locked to
-known actions. Labs doing world-model / video-pretraining work (NVIDIA GR00T,
-Genie, egocentric-video research) are starving for exactly this. A workbench
-data shop can sit at the frontier without a $30k humanoid.
+See [the roadmap](docs/first-training-roadmap.md) and
+[the Phase 1 contract](docs/v0.1-experiment-contract.md).
 
-## Core idea
+## Data and labels
 
-An avatar-based simulator where a teleoperator drives a simulated body while
-two cameras render the same ground truth:
+Source tracking is input to the replay pipeline, not input to the translator.
+External source video is not required: the simulator generates that view.
+The original egocentric video is a reference; synthetic POV is not expected to
+reproduce its original objects, textures, or lighting.
 
-- External view (floating camera) — resembles internet video.
-- Internal view (avatar eyes) — matches the robot's own perspective.
-- Every frame auto-labeled with exact joint commands. No pose estimation,
-  no pseudo-action guessing, no sim-to-real label gap.
+Retargeted joint targets are one chosen embodiment-specific solution.
+Record commanded targets and actual simulated joint state separately.
+Neither inferred human joints nor retargeted commands are uniquely determined
+ground truth about the original human's motor commands.
 
-The world model learns external->internal view translation as a supervised
-problem, plus estimated joint states riding along. Downstream:
+At the first training milestone, predict actual joint trajectories from external
+RGB clips. Replay those predictions to render POV. Predicting commanded targets
+is a separately labeled experiment, since hidden controller dynamics can make
+them ambiguous from images. Direct neural POV generation remains a later goal.
 
-1. Real-world external video -> model *hallucinates* the internal view.
-2. A policy trained on internal views acts on that projection.
-3. The simulator (grounded world model) becomes the cheap place to fail:
-   model-based RL for recovery behaviors, dropped objects, failure modes.
+## First training experiment
 
-## Training recipe (mirrors LLM stages)
+One body, one scene, fixed external camera, head-mounted POV camera.
+Split whole source recordings before clipping or augmentation; group every
+derivative of a recording into the same split. Where recordings share a session
+or continuous take, group those together too.
 
-- Pretrain: passive video, cheap, teaches physics/object permanence.
-- Post-train: imitation on scarce labeled teleop/avatar demos (ACT,
-  diffusion policy, VLA fine-tunes like pi-0/OpenVLA scale).
-- RL: on top of the learned world model, to teach what demonstrators never
-  show — failure and recovery.
+Use a modest image encoder and temporal model. Overfit one short sequence first,
+then train a pilot dataset and evaluate held-out movements. Compare joint error,
+head/hand pose error, jitter, limit violations, and rendered POV against reference.
+Compare constant-pose and nearest-training-motion baselines.
+A small loss or attractive image alone is not evidence of useful reconstruction.
 
-## Known hard parts (design constraints, not blockers)
+## Preserved research direction
 
-- Pixel ambiguity: external views hide redundant joint configs and force.
-  Mitigate with fixed rig, second camera on the elbow, tactile grippers.
-- Video-prediction drift: compounding error when rolling out on own
-  predictions. Mitigate with short horizons + real-sensor re-grounding.
-- Pixels without actions teach limited motor skill — which is why the
-  paired avatar data is the artifact of value, not a stepping stone.
+The paired-data pipeline remains a reusable deliverable. LeRobot-compatible
+export, explicit calibration, provenance, and clean observation/action timing
+remain goals. Raw validated episodes come before format conversion.
+Later experiments can compare direct POV prediction against rendering predicted
+motion, add scene and object reconstruction, vary cameras and appearance, and
+evaluate real external video. A cooking-video benchmark is a long-term direction,
+not a Phase 1 acceptance test.
 
-## Hardware path (budget-ordered)
+Synthetic success does not establish real-video transfer, force recovery, or
+physical robot competence. Occlusion admits multiple solutions; generated
+real-video labels need uncertainty estimates and rejection criteria.
+A kinematic replay simulator is not automatically a learned world model.
+Policy learning, physical-arm pilots, large-model pretraining, and learned-world-
+model RL are deferred until evidence supports them.
 
-- ~$100-250: SO-101 arm kit; x2 for leader-follower teleop (LeRobot standard).
-- ~$500-1000: depth camera (RealSense/Orbbec), better grippers, second arm.
-- ~$2-4k: used quadruped / open biped kits / secondhand dexterous hands.
-- Standalone dexterous hands (Sharpa, BrainCo): few hundred to ~$1k each;
-  two hands + camera = force-control bench rig, no legs needed.
-- Future humanoid reference points (Oct 2026): Unitree H2 $29.9k (full-size,
-  ~3h, 7kg arms); G1 $13.5k (2kg arms, toy-payload); EngineAI T800 ~$25k
-  claimed. Base models block secondary dev — EDU tiers $40-75k are the real
-  price. Wait for the price war; buy in with money AND skills.
+## Compute and choices still to validate
 
-## Compute
+Moe has four AMD V620 GPUs, historically operated at 150 W per GPU.
+Begin with one GPU for training verification. Benchmark actual software and
+rendering support; do not promise overnight training or assume CUDA compatibility.
+Genesis and MuJoCo remain candidates, not validated installations.
+Select the simplest stack that passes the replay and dual-camera probe.
 
-Moe: 4x AMD V620 GPUs. Policy fine-tunes on hours of demos = overnight jobs,
-no cloud needed. Sim stack candidates: Isaac Lab or MuJoCo for avatars,
-LeRobot for the real arm side, open-weights video prediction models.
+EgoDex is an existing candidate in the reference notes, not a verified selection.
+Inspect actual pose fields, calibration, timestamps, units, access conditions,
+and permitted derivative use before choosing a source. Do not use an official
+test split for training. No hardware purchase is needed for Phase 1.
 
-## Benchmark: the cooking video test
+## Document precedence
 
-Final-model acceptance test: feed clips from fixed-camera cooking videos
-(heads-and-hands framing, repetitive manipulative tasks) and score the
-model on (a) predicted internal/first-person video and (b) predicted
-kinematics streams. Fixed cameras make the external view stable enough to
-learn from; cooking is dense in object interactions and contact events.
-Honest caveat: human hands are not robot grippers (embodiment gap), so
-treat kinematics output as an embodiment-agnostic hand pose first, retargeted
-to the arm later. Failure on this benchmark tells us exactly which
-assumption broke.
-
-## Next steps
-
-- [ ] Install Genesis (AMD docker path) on Moe; run the multi-cam tutorial.
-- [ ] Download EgoDex test split (16 GB) as external-data starter.
-- [ ] Order SO-101 teleop pair when budget allows.
-- [ ] Prototype: dual-camera (external + eye) recording in sim, dump
-      LeRobot-format episodes with joint labels.
-- [ ] Train small ACT/diffusion policy on sim data; transfer to real arm.
+This design defines the goal; the current roadmap defines ordering; the Phase 1
+contract defines capture acceptance. Older PDFs and reference surveys are
+historical research inputs, not current implementation instructions. Their prices,
+compatibility statements, dataset details, and training estimates require
+verification before use. Previous design versions remain available in Git history.
