@@ -15,9 +15,11 @@ head, wrists/hands, and fingers. Replay those human movements on a simulated bod
 render a fixed external camera and a head-mounted POV camera, and save synchronized
 joint motion. Original external footage is not required.
 
-First learning question: can a translator reconstruct an unseen movement in the
-same fixed scene? Real-world transfer, object reconstruction, and robot policy
-learning are later research questions.
+First translator learning question: can it reconstruct an unseen movement in the
+same fixed scene? The longer-term goal is a capable household robot, with this
+data generator supplying useful training examples. After Phase 1, probe an
+existing model using movement tools before committing to a large policy-training
+architecture. This probe is distinct from the Phase 2 reconstruction baseline.
 
 2. WHAT HAS BEEN DONE / WHAT HAS CHANGED
 
@@ -269,6 +271,117 @@ a real replay, pause/step/restart it, and see progress or an actionable error.
 Verify playback controls preserve saved time alignment and closing the viewer
 does not silently destroy a capture. Report actual refresh performance; do not
 claim an unmeasured real-time frame rate.
+
+13. LATEST DECISIONS — STEREO, MODEL TOOLS, AND LATER RL
+
+These additions preserve the Phase 1 acceptance gate and the external-video
+translator experiment. They do not authorize a large training run in the initial
+implementation session. Phase 1 remains one faithful replay plus the dashboard.
+
+Stereo capture:
+- Make the head camera rig configurable for synchronized left/right cameras,
+  with a documented baseline, intrinsics, head-relative mounts, and per-frame
+  world poses. Keep a designated primary POV for the existing data contract.
+- Add the second camera after the basic head-camera replay works. It is an
+  incremental capture option, not a blocker for accepting the first replay.
+- Save left and right frames separately at the same frozen simulation state as
+  the external frame and joint labels. Stitch only at model-input/display time.
+- Optionally export metric simulator depth with its coordinate convention,
+  invalid mask, and units for supervision/evaluation. Keep it out of the
+  external-RGB-only translator inputs.
+- The dashboard should allow selecting primary/left/right/stereo POV without
+  compromising synchronized capture or requiring a major UI project.
+- Two images supplied to a general vision model do not establish learned stereo
+  depth. Later compare monocular, two-image, and stitched-pair inputs under a
+  controlled resolution/token budget; measure reaching accuracy and latency.
+  Stereo-specific training is a later experiment, not assumed functionality.
+
+Existing-model control probe, after Phase 1 evidence review:
+- Before choosing a large robot-policy training scheme, test an existing
+  vision-language/tool-capable model against the simulator. Qwen3.5-35B-A3B is
+  a candidate to verify and benchmark, not a required dependency or selected
+  final backbone. Use configurable model endpoints; the model may run on a
+  server while the simulator/dashboard runs on the Mint desktop.
+- This is a separate experiment from reconstructing joints from external video.
+  Policy observations are head RGB (optionally stereo), instruction, robot
+  proprioception, and action results/history. Simulator ground truth used for
+  scoring must not silently appear in visual-only policy observations.
+- Expose a small typed interface: head orientation, left/right palm 6-DoF
+  targets, finger configuration targets, observe/status, and stop/cancel.
+  Specify reference frames, units, absolute versus relative targets, duration,
+  bounds, execution status, and timestamps.
+- Use constrained IK to resolve arm/neck configurations, with joint limits,
+  continuity, collision checks, and explicit residuals/unreachable-target
+  errors. Palm poses do not encode fingers; retain finger commands and source
+  finger data. Do not require the model to emit every joint at every frame.
+- Start with bounded, interruptible commands. A hand-close primitive may specify
+  finger motion; do not promise contact stopping or force regulation without
+  implemented sensing/estimation and a validated controller.
+- First proposed task: reach a visible target and correct when it moves.
+  Measure success, endpoint error, correction behavior, invalid calls, and
+  end-to-end observation-to-action latency. Separate kinematic task success
+  from dynamically executable robot control.
+- Log observations, tool arguments, actual outcomes, failures, and timing.
+  The initial probe uses existing model weights; it is not RL or fine-tuning.
+- Model-written reusable routines/macros are a later extension. Test in
+  simulation through the same bounded API, keep them interruptible, and give
+  them explicit success/failure checks. Do not execute unrestricted generated
+  code inside the simulator process.
+- Server-side model inference is compatible with the goal. Future hardware
+  still needs local motor loops, limits, and a disconnect watchdog; those
+  do not require an onboard large language model.
+
+Training direction, deferred:
+- Distinguish reconstruction training (external video -> motion), imitation
+  training (observation/instruction/history -> actions), and interactive RL
+  (actions -> simulator consequences -> rewards -> weight updates).
+- The small translator baseline remains useful without locking the eventual
+  policy to raw joint-angle outputs. Preserve both source head/palm/finger
+  trajectories and embodiment-specific joints for later action representations.
+- Use the existing-model probe to identify what actually needs training.
+  Adapting a pretrained model is a candidate; a rented-compute large-model run
+  is a long-term option, not a committed parameter count or immediate task.
+- Recorded examples can support supervised training without a live simulator.
+  Interactive simulator RL requires resets, an observation/action interface,
+  rewards, termination conditions, reproducible seeds, and evaluation episodes.
+- Kinematic pose assignment is insufficient evidence for contact-rich skills.
+  Before grasping RL, validate actuator dynamics, collision/contact handling,
+  friction, object response, and available force/contact observations.
+- Introduce failures and recovery scenarios deliberately; score task outcomes
+  and violations, not just plausible movement or language descriptions.
+  Keep reward-only simulator information separate from deployable observations.
+- Complete chores eventually require long sequences, task progress, outcomes,
+  interruptions, and recovery examples. Isolated motion clips are only a start.
+- Benchmark simulator throughput and visual-model inference/training costs
+  before scaling parallel rollouts or renting compute. Synthetic performance
+  does not establish transfer to real cameras, contacts, or hardware.
+
+Relevant research pointers, to inspect only when implementing those later stages:
+StereoVLA (stereo-specific VLA representations and supervision):
+https://arxiv.org/abs/2512.21970
+Code as Policies (language-model-generated robot routines):
+https://code-as-policies.github.io/
+RoboGen (simulation-based skill learning):
+https://proceedings.mlr.press/v235/wang24cc.html
+
+14. START HERE — INITIAL CODEX RUN
+
+On the Linux Mint gaming PC:
+1. Read AGENTS.md and the current design/roadmap/contract plus this handoff.
+   Inspect existing work before changing it. The Mint machine in section 10 is
+   the Phase 1 target; older references to starting on Moe are not prerequisites.
+2. Verify the local Python/MuJoCo environment and actual graphics rendering.
+3. Build the one-arm/one-Shadow-Hand probe with an early live desktop dashboard.
+4. Inspect a small real source sample, then work through retargeting, both hands,
+   head motion, synchronized recording, and reload/error checks.
+5. Add stereo capture if straightforward after the primary POV works; preserve
+   a working monocular path if it blocks progress.
+6. Deliver a documented launch command, pinned configurations, one faithful
+   recorded replay, dashboard, and measured evidence. Report any actual blocker.
+   Stop for Phase 1 review before dataset scaling, policy experiments, or RL.
+
+Do not spend the first session selecting a final neural architecture or building
+an RL framework. Make the replay visible and reproducible first.
 
 This document is a working plan for the future implementation session.
 Publishing the plan does not mean any implementation or training has occurred.
