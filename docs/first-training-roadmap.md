@@ -6,14 +6,21 @@ initially in one fixed simulated scene.
 
 ## Phase 1 — validate one source recording and produce one faithful replay
 
+0. Probe one Reachy 2 arm with one Shadow Hand in MuJoCo. Verify model loading,
+   attachment orientation, joint coupling, limits, collisions, and wrist ownership.
+   Pin upstream assets and licenses. Scripted sweeps may verify assembly but do
+   not satisfy the human-replay gate. This combination has not yet been tested.
 1. Inspect one small sample from an eligible egocentric motion dataset.
-   Document head and both hand position/orientation fields, timestamp alignment,
+   Document head, both wrists/hands, and individual finger pose fields, timestamp alignment,
    coordinate frames, scale, calibration, tracking validity, source split,
    provenance, and permitted use. Choose a short contact-free segment.
 2. Probe the simulator on the actual machine: one fixed-base human-proportioned
-   upper body, articulated arms and head, simple hands, plain scene, fixed
+   upper body, articulated arms, head and fingers, plain scene, fixed
    external camera, and head-mounted POV camera. Record versions and throughput.
-3. Map tracked motion to the body with continuous joint targets. Preserve source
+3. Map tracked motion to the body with continuous joint configurations.
+   Begin with one arm/hand, then include both sides and head. Use kinematic replay
+   initially and mark replay_mode=kinematic. Respect finger coupling and record
+   thumb/fingertip errors; do not equate assigned state with motor tracking. Preserve source
    timestamps and transforms. Log residuals, unreachable poses, joint limits,
    and any filtering. Unsupported source channels must be explicit.
 4. Record synchronized images, targets, and actual joint states. Reload the
@@ -38,7 +45,7 @@ Stop here to review the evidence before expanding scope.
    Save checkpoint, configuration, seeds, split manifest, losses, metrics,
    hardware/software versions, throughput, and comparison videos.
 
-Report joint-angle error, head/hand position and orientation error, temporal
+Report joint-angle error, head/hand position and orientation error, fingertip error, temporal
 jitter, joint-limit violations, and POV consistency against reference. Compare
 constant-pose and nearest-training-motion baselines with the same inputs.
 Set numerical acceptance thresholds using Phase 1 validation measurements before
@@ -52,7 +59,7 @@ neural video generation or generalization to YouTube footage.
 Direct learned POV generation; larger or varied scenes; object reconstruction
 and contact; appearance/camera variation; real-video evaluation and confidence
 filtering; downstream policy utility; optional physical-arm transfer.
-Large-scale data generation, articulated fingers, walking, RL, and large-model
+Large-scale data generation, dynamic grasping, walking, RL, and large-model
 pretraining are not prerequisites for the first run.
 
 ## Preserved engineering requirements
