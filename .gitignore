@@ -1,0 +1,12 @@
+.venv*/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv-*/
+__pycache__/
+*.pyc
+
+# stray per-GPU files Genesis/quadrants writes into cwd
+0000:*.0

@@ -1,0 +1,45 @@
+POWERMCG3 GPU ACCESS — ONE COMMAND, RUN TONIGHT
+=================================================
+
+Why: praxisog on PowermacG3 (the Linux Mint gateway/desktop, RX 6800)
+is not in the render/video groups, so /dev/kfd and /dev/dri/renderD12x
+are permission-denied for compute jobs. Sudo needs a password over SSH
+and I don't handle passwords, so this is yours.
+
+STEP 1 — at the desktop (or ssh in), run:
+
+    sudo usermod -aG render,video praxisog
+
+STEP 2 — make the groups take effect. Log out and back in, or on the
+SSH session you will use for work, start a fresh login. To verify from
+any new session:
+
+    id | grep -oE "(render|video)"
+    ls -la /dev/kfd
+
+Expected: both group names print, and ls works without sudo errors.
+
+STEP 3 — OPTIONAL, only if you want me self-sufficient for future
+group/permission fixes on this box (one line, review before trusting):
+
+    echo "praxisog ALL=(ALL) NOPASSWD: /usr/sbin/usermod, /usr/sbin/groups" | sudo tee /etc/sudoers.d/praxisog-gpu
+    sudo chmod 440 /etc/sudoers.d/praxisog-gpu
+
+STEP 4 — tell me it's done (any message works). I will then, over the
+existing SSH session:
+  - create the pinned venv (Python 3.12) on the desktop
+  - install ROCm-build PyTorch + Genesis into it
+  - run the two probes independently:
+      probe 1: torch forward/backward/optimizer on the RX 6800
+      probe 2: headless EGL/OpenGL render (Genesis rasterizer path)
+  - record all versions into a lockfile committed to the repo
+  - resolve the two 'pending Task 2 probe' camera extrinsics in
+    docs/v0.1-experiment-contract.md
+
+If step 1's verification fails (groups present but /dev/kfd still
+denied), the desktop's udev/login state is stale; a reboot fixes it,
+but check ls -la /dev/kfd after step 2 before assuming that.
+
+NOTE: do not touch the RX 6800 while the display is in heavy use;
+compute jobs contend with the desktop compositor. Best iteration
+window is when the monitor's off.
