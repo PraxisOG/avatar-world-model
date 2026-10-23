@@ -1,0 +1,225 @@
+AVATAR WORLD MODEL — CODEX HANDOFF
+Working plan, 22 October 2026
+Repository: https://github.com/PraxisOG/avatar-world-model
+Purpose: planning handoff for a future Codex implementation session.
+No implementation, model assembly, dataset inspection, or training is claimed here.
+
+1. PROJECT GOAL
+
+Eventually take external human video (including suitable YouTube footage) and
+generate corresponding motor kinematics and first-person video for a large-scale
+training dataset.
+
+Bootstrap the translator with existing egocentric recordings that contain tracked
+head, wrists/hands, and fingers. Replay those human movements on a simulated body,
+render a fixed external camera and a head-mounted POV camera, and save synchronized
+joint motion. Original external footage is not required.
+
+First learning question: can a translator reconstruct an unseen movement in the
+same fixed scene? Real-world transfer, object reconstruction, and robot policy
+learning are later research questions.
+
+2. WHAT HAS BEEN DONE / WHAT HAS CHANGED
+
+The repository's README, DESIGN.md, AGENTS.md, report index, Phase 1 contract,
+and new first-training roadmap were aligned earlier in this conversation.
+Historical PDFs and reference surveys were marked as historical.
+Refresh the repository before working; use the current design and contract.
+
+Decisions incorporated into the repository with this handoff:
+- Include articulated finger replay; static grippers omit important source motion.
+- Investigate Reachy 2 with Shadow Hands as the preferred simulation combination.
+- Start with one arm and one hand before assembling both sides and the head.
+- Use kinematic replay initially; do not require dynamic motor execution.
+Static-hand and deferred-finger instructions have been superseded.
+Check for any later changes before implementing.
+
+No combined model has been loaded. No real dataset sample has been inspected.
+No source-to-avatar mapping, recorder, or training run exists from this session.
+Reachy plus Shadow is a candidate to validate, not a proven compatible assembly.
+
+3. CURRENT EMBODIMENT CHOICE
+
+Preferred prototype:
+- Reachy 2 upper body and arms.
+- Its articulated head/neck for the moving POV camera.
+- Left and right Shadow Hand models replacing the grippers.
+- Fixed base, plain scene, fixed external camera.
+- Fingers move, but no object contact or grasping-force work initially.
+
+Initial sources to inspect and pin to exact revisions:
+Reachy MuJoCo assets:
+https://github.com/pollen-robotics/reachy2_mujoco_assets
+Reachy prototype simulator SDK:
+https://github.com/pollen-robotics/reachy2_mujoco
+Reachy descriptions:
+https://github.com/pollen-robotics/reachy2_core
+Shadow Hand left/right MuJoCo models:
+https://github.com/google-deepmind/mujoco_menagerie/tree/main/shadow_hand
+
+Verified from upstream documentation during planning:
+Reachy 2 has two 7-DoF arms and a 3-DoF neck.
+The Reachy simulator interface is explicitly an early prototype.
+Menagerie provides left and right Shadow Hand E3M5 models.
+Do not assume their combination is a supported real hardware configuration.
+
+Check model and mesh licenses before combining or distributing assets.
+Prefer minimal MuJoCo model access over installing a complete robot/ROS stack
+unless that stack materially simplifies the prototype. Confirm this by inspection.
+
+4. PHASE 1A — LOAD AND ASSEMBLE ONE ARM / ONE HAND
+
+Read current AGENTS.md, DESIGN.md, docs/first-training-roadmap.md, and
+docs/v0.1-experiment-contract.md. Preserve unrelated repository work.
+
+Inspect both model trees:
+- Include paths, meshes, units, joint names, actuators, tendons, constraints,
+  defaults, collision groups, and left/right conventions.
+- Existing Reachy wrist rotations versus the Shadow model's wrist joints.
+  Define the attachment boundary deliberately; do not duplicate wrist motion.
+- Hand attachment origin and rotation, palm orientation, finger axes and scale.
+- Name collisions when importing two copies later.
+- Controller assumptions about the original gripper's geometry and mass.
+
+Build the smallest reproducible scene with one supported Reachy arm and one
+Shadow Hand. Remove/disable the replaced gripper intentionally.
+Retain source model joint limits and coupling constraints, or document deviations.
+
+Smoke test loading, joint enumeration, wrist alignment, arm sweeps, and finger
+opening/curling/pinching. Render a short preview.
+Synthetic commands are acceptable for this assembly smoke test ONLY; they do not
+satisfy the later human-recording replay gate.
+
+Acceptance:
+- Scene loads reproducibly with pinned assets.
+- The hand is correctly oriented at the wrist.
+- Requested joint changes visibly affect the intended joints.
+- No obvious attachment penetration or duplicated wrist transform.
+- Model constraints/couplings are understood and respected.
+Report blockers before choosing another embodiment.
+
+5. PHASE 1B — INSPECT ONE REAL SOURCE SAMPLE
+
+EgoDex is the existing candidate, not a verified selection.
+Inspect official documentation and a small actual recording before bulk download.
+Confirm:
+- Head, wrist/hand, and individual finger pose channels.
+- Whether pose labels are measured, fitted, or otherwise estimated.
+- Coordinate frames, units, handedness, rotations/quaternion convention.
+- Frame timestamps, sampling rates, tracking validity/confidence.
+- Camera calibration and relation between tracked head and source camera.
+- Official dataset split, license/access terms, and derivative-use permissions.
+
+Choose a short, mostly stationary, contact-free movement with useful finger
+variation. Preserve recording/session identity and source hashes.
+Never use the official test split to train.
+Do not infer data availability from an old reference table.
+
+6. PHASE 1C — RETARGET ONE RECORDING
+
+Start with one arm, wrist, and finger sequence. Define world/body/palm transforms
+explicitly. Account for human/robot scale and different hand proportions.
+Use position/orientation or fingertip objectives suited to the supplied channels;
+do not copy human finger angles blindly into robot joints.
+
+Preserve joint limits and coupled joints; log unreachable poses, tracking
+residuals, filtering, interpolation, and rejected frames.
+Maintain temporal continuity and measure thumb/fingertip errors.
+Inspect self-intersection and arm/hand collision, even without object contact.
+
+After this works, add the second arm/hand and head motion.
+A fixed body cannot reproduce arbitrary head translation. Choose compatible
+recordings and quantify unsupported motion; do not silently omit it or introduce
+unplanned torso/base movement.
+
+7. KINEMATIC REPLAY VERSUS DYNAMIC CONTROL
+
+First prototype may set joint configurations directly and render them.
+That establishes geometric reconstruction, not physically executable control.
+
+Record source poses, solved joint configurations, and simulator-read state
+separately. In kinematic mode, simulator state may equal the assigned configuration;
+do not describe that as measured motor tracking performance.
+Mark every episode replay_mode=kinematic.
+
+If dynamic control is later added, record controller targets, actual state,
+velocities, gains, control intervals, and target-to-state errors separately.
+Do not invent motor commands, torques, or force labels from kinematic replay.
+Physical Reachy/Shadow integration is outside this phase.
+
+8. PHASE 1D — CAPTURE AND VERIFY ONE EPISODE
+
+At each capture instant, freeze the state, read joint configuration, and render
+external and head cameras without advancing the simulation between them.
+Store:
+- External RGB and head-camera RGB.
+- Joint names/order, units, joint states, and solved targets.
+- Original head/hand/finger poses, validity and retargeting residuals.
+- Simulation time, source time, step IDs, sampling/interpolation rules.
+- Camera intrinsics, parent frames, mount transforms, per-frame world poses.
+- Model revisions, scene configuration, source provenance, replay mode and seed.
+
+Use inspectable raw files first: JSON manifest, numerical tables, image streams.
+LeRobot-compatible export can follow a validated raw format.
+
+Validate actual image content and reload/replay, not just matching timestamp IDs.
+Produce source-versus-replay pose plots and an external/POV preview.
+Report positional/orientation errors, fingertip errors, jitter, limit violations,
+and rejected samples. Establish explicit tolerances based on source quality and
+the probe before accepting the replay; do not claim invented thresholds passed.
+
+PHASE 1 DONE:
+One real short recording drives both arms, articulated fingers, and the head;
+the paired images and joint data reload correctly; limitations and measured errors
+are documented. Review this evidence before scaling.
+
+9. PHASE 2 — FIRST TRAINING RUN (PLAN ONLY UNTIL PHASE 1 PASSES)
+
+Generate a small pilot dataset in the same fixed scene and camera arrangement.
+Split by original recording/session before clipping, rendering variants, or
+augmentation. All derivatives remain in the same split.
+
+Baseline: modest pretrained image encoder plus a temporal model.
+Input: external RGB clips only.
+Target: joint configuration visible at the corresponding timestamps.
+No source tracking, ground-truth POV, joint state, or simulator-only information
+may leak into input features.
+Specify whether clips are causal; offline reconstruction may use future frames,
+but evaluate consistently and do not imply online control.
+
+First overfit one short training sequence using the real saved-data loader.
+Then train on the pilot set, tune on validation, and evaluate held-out movements.
+Render POV by replaying predicted joints in the known scene.
+This is NOT direct neural POV generation.
+
+Compare against constant-pose and nearest-training-motion baselines.
+Report joint, head/hand/fingertip, temporal, and rendered-POV errors.
+Save checkpoint, split manifest, configuration, seed, versions, timing, and
+side-by-side videos. Finite loss alone is not evidence of success.
+
+10. COMPUTE AND SCOPE
+
+Target machine: Moe, four AMD V620 GPUs; historical operating cap 150 W each.
+Start with one GPU for training verification. Measure installed runtime/rendering
+support and actual throughput. No assumptions about CUDA-only packages working,
+overnight training, or access to Moe from another execution environment.
+
+Phase 1 does not require physics-accurate grasping, objects, walking, balance,
+photorealism, physical hardware, RL, or a large model.
+Preserve raw human tracking so another embodiment can be selected later.
+
+11. INSTRUCTIONS FOR THE FUTURE CODEX SESSION
+
+Begin with current repo inspection and document reconciliation, then the one-arm,
+one-Shadow-Hand integration probe. Work through the Phase 1 gates in order.
+Keep runnable commands, configurations, dependency revisions, and evidence in
+the repository. Keep source recordings/large generated assets out of Git unless
+an explicit data/versioning plan calls for them.
+
+If blocked, report the exact dependency, missing channel, access requirement,
+or model incompatibility. Do not substitute fabricated data and call the gate done.
+Stop after presenting the completed Phase 1 evidence for review before scaling.
+
+This document is a working plan for the future implementation session.
+Publishing the plan does not mean any implementation or training has occurred.
+
