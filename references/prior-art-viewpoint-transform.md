@@ -1,3 +1,10 @@
+> Historical research notes (2026-10-20), not the current implementation plan.
+> Follow [DESIGN.md](../DESIGN.md), the [current roadmap](../docs/first-training-roadmap.md),
+> and the [Phase 1 contract](../docs/v0.1-experiment-contract.md).
+> Dataset, license, prior-art, and software claims below have not been reverified
+> in the 2026-10-22 planning update. Recommendations below are superseded where
+> they conflict with source-motion replay and external-video reconstruction.
+
 # Prior art: third-person → first-person view transformation for robot learning
 
 Question: has someone already done "watch external video, synthesize the
