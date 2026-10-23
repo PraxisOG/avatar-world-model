@@ -13,7 +13,9 @@ local box. Not a product. No guarantees, no roadmap promises.
 
 1. Read DESIGN.md fully. It is the single source of truth for the thesis.
 2. Read docs/first-training-roadmap.md and docs/v0.1-experiment-contract.md.
-   Phase 1 is source inspection and one faithful head-and-hand replay; older
+   Also read docs/Avatar_Codex_Handoff.txt. First probe one Reachy arm plus one
+   Shadow Hand in MuJoCo, then extend to both sides and head.
+   Phase 1 includes articulated fingers and one faithful recorded-motion replay; older
    arm-first PDFs and reference recommendations are historical.
 3. Read the open questions in README.md. Answer one or critique one; do not
    restate the design back to us.
@@ -40,6 +42,10 @@ local box. Not a product. No guarantees, no roadmap promises.
 - Hardware purchases are deferred; no physical arm is required for Phase 1.
 - Never present source inspection, replay, or training gates as completed without
   measured evidence. Translator inputs must not leak tracked poses or joint labels.
+
+- Label direct configuration replay as kinematic. Do not claim successful motor
+  tracking or physical feasibility from pose assignment. Preserve source finger
+  tracking and respect hand joint coupling and limits.
 
 ## Style
 
