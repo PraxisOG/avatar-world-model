@@ -1,0 +1,22 @@
+{
+  "source_hdf5": "data/egodex/part2/basic_pick_place/9.hdf5",
+  "source_mp4": "data/egodex/part2/basic_pick_place/9.mp4",
+  "expected_source_sha256": {
+    "hdf5": "9570554e67635297b236e729b073c6ba50b62729431b18ac1ff2ac2d517501a6",
+    "mp4": "6721ed901d821a90abbbf10bd1287c07bb5fe37fba6692b2c9d341da64e5eef4"
+  },
+  "source_start_frame": 12,
+  "source_stop_frame_exclusive": 32,
+  "source_confidence_min": 0.3,
+  "selection_reason": "Right-hand free-space approach before touching the box or bowl; visually reviewed every selected frame. Both hands have nonzero finger tracking. Left hand is retained but not retargeted in this milestone.",
+  "arm_scale": 1.0,
+  "acceptance": {
+    "palm_position_max_m": 0.02,
+    "palm_orientation_max_deg": 10.0,
+    "normalized_fingertip_mean_max_m": 0.02,
+    "normalized_fingertip_worst_max_m": 0.04,
+    "joint_step_max_rad": 0.25,
+    "penetration_max_m": 0.001
+  },
+  "acceptance_scope": "Provisional one-arm engineering probe thresholds chosen before retargeting. Not a source-precision claim or full Phase 1 acceptance. No head/left-hand replay, physical control, or training is accepted by these thresholds."
+}

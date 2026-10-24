@@ -1,6 +1,15 @@
 # Roadmap to the first training run
 
-Agreed 2026-10-22. All gates below are pending, not completed results.
+Agreed 2026-10-22. The initial one-arm assembly probe now has
+[measured evidence](probes/2026-10-22-arm-assembly.json) and a live local viewer.
+It passed the documented scripted sweeps. On 2026-10-23, source inspection and a
+20-frame right-arm/hand kinematic EgoDex replay passed provisional one-arm checks;
+see [measured source-replay evidence](probes/2026-10-23-source-replay.json).
+Mean adjusted fingertip fit is 2.03 mm; original-human discrepancy is 23.91 mm.
+Original timing, transforms and confidence are retained. Source elbow tracking is
+unusable in this segment and is excluded from the fit; head and left-hand motion
+are retained but not replayed. This does not complete the full Phase 1 gate.
+Both sides/head, simulated head POV, full camera capture and training remain pending.
 Goal: external video of an unseen movement -> joint trajectory + consistent POV,
 initially in one fixed simulated scene.
 
@@ -9,7 +18,7 @@ initially in one fixed simulated scene.
 0. Probe one Reachy 2 arm with one Shadow Hand in MuJoCo. Verify model loading,
    attachment orientation, joint coupling, limits, collisions, and wrist ownership.
    Pin upstream assets and licenses. Scripted sweeps may verify assembly but do
-   not satisfy the human-replay gate. This combination has not yet been tested.
+   not satisfy the human-replay gate. This step passed the documented assembly probe.
 1. Inspect one small sample from an eligible egocentric motion dataset.
    Document head, both wrists/hands, and individual finger pose fields, timestamp alignment,
    coordinate frames, scale, calibration, tracking validity, source split,

@@ -1,0 +1,16 @@
+{
+  "reachy2_mujoco_assets": {
+    "url": "https://github.com/pollen-robotics/reachy2_mujoco_assets.git",
+    "revision": "bbf3e1c3dd3cc7a211887a3690686920260f2017",
+    "license": "Apache-2.0",
+    "license_path": "LICENSE",
+    "sparse_paths": ["/LICENSE", "/README.md", "/assets/reachy2_asset.xml", "/objects/reachy2_body.xml", "/scenes/base_scene.xml", "/assets/meshes/reachy2/"]
+  },
+  "mujoco_menagerie": {
+    "url": "https://github.com/google-deepmind/mujoco_menagerie.git",
+    "revision": "cda5236f98383f6fbaa4820c6b18dba892cd087f",
+    "license": "Apache-2.0 (Shadow Hand subtree)",
+    "license_path": "shadow_hand/LICENSE",
+    "sparse_paths": ["/shadow_hand/"]
+  }
+}

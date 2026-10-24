@@ -1,0 +1,185 @@
+{
+  "recorded_at_utc": "2026-10-23T22:37:20.101086+00:00",
+  "scope": "One right-arm/hand kinematic replay of a short real-source segment. Full Phase 1, left/head replay, motor control, and training remain incomplete.",
+  "recording": "part2/basic_pick_place/9.hdf5",
+  "session_id": "2025-04-02_14-03-47.mov",
+  "source_hashes": {
+    "hdf5": "9570554e67635297b236e729b073c6ba50b62729431b18ac1ff2ac2d517501a6",
+    "mp4": "6721ed901d821a90abbbf10bd1287c07bb5fe37fba6692b2c9d341da64e5eef4"
+  },
+  "official_split": "train",
+  "source_start_frame": 12,
+  "source_stop_frame_exclusive": 32,
+  "frames": 20,
+  "duration_seconds": 0.6333333333333334,
+  "source_pts_verified": true,
+  "minimum_consumed_source_confidence": 0.3270494341850281,
+  "palm_position_error_max_m": 1.3273654490523876e-08,
+  "palm_orientation_error_max_deg": 1.0559988343580017e-05,
+  "normalized_fingertip_mean_error_m": 0.002030550422882171,
+  "normalized_fingertip_max_error_m": 0.007297877907686105,
+  "raw_human_fingertip_mean_error_m": 0.02391297760105173,
+  "raw_human_fingertip_max_error_m": 0.04062581908675972,
+  "per_finger_errors": {
+    "index": {
+      "normalized_mean_m": 0.00670351730159358,
+      "raw_mean_m": 0.024141621128732728
+    },
+    "middle": {
+      "normalized_mean_m": 0.0016191129118912867,
+      "raw_mean_m": 0.018691965471873566
+    },
+    "ring": {
+      "normalized_mean_m": 0.0005250926865086015,
+      "raw_mean_m": 0.021496432815651462
+    },
+    "little": {
+      "normalized_mean_m": 0.00037505222716002556,
+      "raw_mean_m": 0.04010009696882522
+    },
+    "thumb": {
+      "normalized_mean_m": 0.0009299769872573594,
+      "raw_mean_m": 0.015134771620175671
+    }
+  },
+  "joint_limit_violations": 0,
+  "tendon_range_violations": 0,
+  "max_penetration_m": 0.0,
+  "minimum_arm_hand_clearance_m": 0.009320698226805256,
+  "max_joint_step_rad": 0.07613003766029286,
+  "per_joint_motion_span_rad": {
+    "r_shoulder_pitch": 0.7545691938045105,
+    "r_shoulder_roll": 0.1722021497356792,
+    "r_elbow_yaw": 0.5263525112532821,
+    "r_elbow_pitch": 0.39044580627651304,
+    "r_wrist_roll": 0.1494079627810173,
+    "r_wrist_pitch": 0.3244680588226958,
+    "r_wrist_yaw": 0.3319735218017747,
+    "rh_FFJ4": 0.0,
+    "rh_FFJ3": 0.03863223081995504,
+    "rh_FFJ2": 0.11223498718430716,
+    "rh_FFJ1": 0.05148693511554613,
+    "rh_MFJ4": 0.05771152094373927,
+    "rh_MFJ3": 0.14293414461147508,
+    "rh_MFJ2": 0.06042613823152787,
+    "rh_MFJ1": 1.536625755672065e-10,
+    "rh_RFJ4": 0.06852135599526701,
+    "rh_RFJ3": 0.2181002934553652,
+    "rh_RFJ2": 0.10364073913032945,
+    "rh_RFJ1": 0.007757048988344042,
+    "rh_LFJ5": 0.0,
+    "rh_LFJ4": 0.08311841891700006,
+    "rh_LFJ3": 0.2167780388125815,
+    "rh_LFJ2": 0.1917912921847562,
+    "rh_LFJ1": 0.0322690507095581,
+    "rh_THJ5": 0.190999264804798,
+    "rh_THJ4": 0.16806385287964787,
+    "rh_THJ3": 0.055349235048820486,
+    "rh_THJ2": 0.02450488517570094,
+    "rh_THJ1": 0.10104441583047799
+  },
+  "source_head_translation_from_initial_max_m": 0.005783963627587876,
+  "head_and_left_replay": "Not implemented; source channels retained unchanged",
+  "physics_steps": 0,
+  "replay_mode": "kinematic",
+  "graphics": {
+    "vendor": "AMD",
+    "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+    "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+  },
+  "unique_external_frames": 20,
+  "reload_max_pixel_errors": [
+    0,
+    0,
+    0
+  ],
+  "accepted_frames": 20,
+  "rejected_frames": 0,
+  "acceptance": {
+    "palm_position_max_m": 0.02,
+    "palm_orientation_max_deg": 10.0,
+    "normalized_fingertip_mean_max_m": 0.02,
+    "normalized_fingertip_worst_max_m": 0.04,
+    "joint_step_max_rad": 0.25,
+    "penetration_max_m": 0.001
+  },
+  "acceptance_scope": "Provisional one-arm engineering probe thresholds chosen before retargeting. Not a source-precision claim or full Phase 1 acceptance. No head/left-hand replay, physical control, or training is accepted by these thresholds.",
+  "passed": true,
+  "full_phase1_gate_passed": false,
+  "code_sha256": {
+    "scripts/source_replay.py": "99d314d2612450a319c3111ae9fc55f9f1bc488a73ab65e3f6c8c1d3db3dacfb",
+    "scripts/egodex_source.py": "af17530eb3df186d42c7979299611c8cf515f9dff6eea360119e83a95fe853eb",
+    "scripts/retarget_egodex.py": "8aa235d24e891ab8ddb6cabbbf1cfa017e13fccf7fd7cc478f4a38bfab5dac60",
+    "scripts/arm_assembly.py": "b6d2f36d75e2650c006cc91ea8a67122aa51b0813a9573c7b59b00af75cc17dd",
+    "config/arm_probe.json": "037671440d16a51815ab0f66cdbe4587e2613ebdf72de3695b3053bea0932f5f",
+    "config/source_replay.json": "4df0b045942e836b15d8afe3909b7e75b2f4da4d6f50e2f2ad3629caad76ebd8",
+    "assets.lock.json": "67ca829b325cd517e7b69e7c2e9d666d5809d9e4bf41624a46ddc9bd71392f90",
+    "requirements.lock.txt": "1e6a8411ee14288b4353157f1fbc4d1eb8ca1b85c1c33d1d01e0099d1848272c"
+  },
+  "artifact_sha256": {
+    "scene.xml": "19838069110437bde39f35e9c30d3e0985f76a0ad2b01c002ac98ee0a7c2f696",
+    "manifest.json": "b40375eaf52e35ed53373430236602146a1103be4b31da10fede091b36a4ad6d",
+    "replay-trajectory.npz": "1ed41b08f147e888ebc588b1f18699eb751b7eb89f77898757cfefdaa1c3b947",
+    "replay-metrics.json": "829efe5e56ee30956cd5507b1f76eec6df4965cadef1d598309843c370d8b0cb",
+    "original-tracking.npz": "64cfba21fbd4925870fcaeac385c4724da6a35dcc2816dff4df4967d1ca759fe",
+    "source-inspection.json": "a760904b707ad617967ada27aa756665075c37c08e4e267cc448a2a9e095d75f",
+    "source-reference/00000.jpg": "56bf13f9fed3da70b07417eb90d89278be86decc00b7ac50897697f4d192066c",
+    "source-reference/00001.jpg": "c95474e6afb5862e67ca1c493d5f95112002f6ec158aec53bb7f216002f4f409",
+    "source-reference/00002.jpg": "953ec25036c4c44806a1d7081f4eaefda881b905e1e6067fd17643459ee19cad",
+    "source-reference/00003.jpg": "7dff6f543b34c3b5db4b656c8ee80b5b24196107b6afe5e59a221928ab321dc2",
+    "source-reference/00004.jpg": "5e5e9808b009e35a8e5f650120dfb5dd3770cf1ac5d186975a52e3c9dcd81a5a",
+    "source-reference/00005.jpg": "0d88f6a3187675d6e57c5a28f6dd8fdc1714b4daa6df49ea0aca1303e0faf2f9",
+    "source-reference/00006.jpg": "a371dbdce0313d55fa0f5cad887a7a6a20e368953b896576d0d4cbf511cbfe2e",
+    "source-reference/00007.jpg": "751b6ec3e2f8126ca1f1b088349ee5aec9f4220e80a697a66c2e8fbae4c18a8d",
+    "source-reference/00008.jpg": "d83cd52ee60bc95e908a21b4cff7a734b7e815fc5be3a2ee28424eb5895c08dd",
+    "source-reference/00009.jpg": "67d05411334bb46f1bc526edc7e83203bddafab5ad47eaed10dd60caa9bd1041",
+    "source-reference/00010.jpg": "8d515255a33f724d81ad5ce2e20c8e4e7c24b0d325df2ed8d1108dab408e0911",
+    "source-reference/00011.jpg": "f5593d511ed4320e1631852f8d035ad79c0fdff14fecf8512565da79b71436e6",
+    "source-reference/00012.jpg": "6fe441032f990c0a34b6fff0f903d0a249f34d87c648b522d3095d9bcf004296",
+    "source-reference/00013.jpg": "f5c82af0ca53095589f7922e3e5fdece87b69641b2b3f9ed2cb2646b63510034",
+    "source-reference/00014.jpg": "9734e8f1a7266758d06df102d7918603d189a593bba5bf7738cc950dd9745683",
+    "source-reference/00015.jpg": "ecc58c2e9a0d539573524ed98f0471f81c46f5a8b81e06e66c2c55919669ce28",
+    "source-reference/00016.jpg": "ae1cbb801c1e961815ade6da17f09d9c9412690fc268c5ba42f3ad0ae32d057f",
+    "source-reference/00017.jpg": "f3864f552f53662eeca0540ef97e22927e751921ee5b8608bbb717c504230667",
+    "source-reference/00018.jpg": "a98fa640c6c3a7896e4f52e8398c6c4a08e8498692484492efbc964fbb12d377",
+    "source-reference/00019.jpg": "630ff74fa252f00e3340f157277aa804f1cbccdd15f23ce8be2c0091850d268b"
+  },
+  "evidence_kind": "Scalar local-probe measurements and provenance; source and derived motion/media excluded",
+  "limitations": [
+    "Head-camera and left-hand poses are preserved, but not replayed by the one-arm model.",
+    "Metacarpal channels have very low constant confidences in these files; preserved but excluded from fitting.",
+    "Right forearm/elbow confidence drops to zero in this segment; preserved but not used as an IK target.",
+    "No source force, torque, physical contact labels, or human motor commands are supplied.",
+    "Source camera confidence and absolute clip offset within its session are not supplied.",
+    "No depth or lens-distortion parameters are supplied in this HDF5; source RGB is a reference, not reconstructed scene texture."
+  ],
+  "tests": {
+    "unittest": {
+      "passed": 10,
+      "failed": 0,
+      "command": ".venv/bin/python -m unittest discover -s tests -v"
+    },
+    "source_browser": {
+      "passed": true,
+      "script": "tests/check_source_replay_browser.py"
+    },
+    "scripted_browser": {
+      "passed": true,
+      "script": "tests/check_dashboard_browser.py",
+      "port": 8766
+    }
+  },
+  "viewer_code_sha256": {
+    "scripts/probe_dashboard.py": "6f138423374c0ec7a08328d4beda92f1f12fb186cc9d4ac0a5b6e7be3c832212",
+    "ui/probe.html": "7f5a81f40032f79616d01c2810604b6ed1280aebd7a0cf605643eec0e2f83fcc",
+    "scripts/run_source_replay.py": "2203ff6609955495aab54f908f9d38acacbe0c9d4e1d924c506e34b3e8c564fa",
+    "tests/test_source_replay.py": "9ef58dfbf222ed02fdffb4ee81ae0319d155a460f72a97c726f9274567060d5e",
+    "tests/check_source_replay_browser.py": "d28c34f7fdb5e9785f48d76bfa32b307f8408df5614bc9eea9e2b94bb2729dbc"
+  },
+  "local_evidence_directory": "artifacts/source-replay/",
+  "source_repository": {
+    "url": "https://github.com/apple-aiml-research/ml-egodex",
+    "revision": "718d9ebd8ec17187f72a74a08c66deea80178cb6"
+  },
+  "source_license_statement": "CC-by-NC-ND; publisher README does not specify version. Source and derived motion/media kept local."
+}

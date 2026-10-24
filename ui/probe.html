@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Avatar · Arm assembly probe</title>
+<style>
+[hidden]{display:none!important}
+:root{color-scheme:dark;font:16px system-ui,sans-serif;background:#101820;color:#e8eef2}*{box-sizing:border-box}body{margin:0;padding:28px;max-width:1700px;margin:auto}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}h1{font-size:26px;font-weight:650;margin:0 0 7px}p{color:#a7bac8;line-height:1.5;margin:0}.badge{background:#203a3d;color:#90e4cf;border:1px solid #3e6c65;border-radius:30px;padding:8px 14px;white-space:nowrap}.panes{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}.pane{background:#16232d;border:1px solid #2d414f;border-radius:12px;overflow:hidden}.pane h2{font-size:14px;font-weight:500;padding:14px 18px;margin:0;border-bottom:1px solid #2d414f;color:#b9ccd9;display:flex;justify-content:space-between}#external{display:block;width:100%;aspect-ratio:1.5;object-fit:contain;background:#17232e}.placeholder{min-height:300px;height:calc(100% - 46px);display:grid;place-content:center;text-align:center;padding:32px}.placeholder b{font-size:21px;font-weight:500;display:block;margin-bottom:12px}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0}button,select{font:inherit;color:inherit;background:#263c4a;border:1px solid #496171;border-radius:7px;padding:10px 17px;cursor:pointer}button:hover{background:#355262}button:focus-visible,select:focus-visible{outline:2px solid #8ce2d0;outline-offset:3px}button.primary{background:#81d7c6;border-color:#81d7c6;color:#0d2826;font-weight:650}button:disabled,select:disabled{opacity:.45;cursor:wait}.controls label{margin-left:10px;color:#b9ccd9}#stage{font-size:19px;margin-top:12px}progress{width:100%;height:7px;accent-color:#81d7c6;margin:17px 0}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{padding:16px;background:#16232d;border:1px solid #2d414f;border-radius:9px}.metric small{display:block;color:#a7bac8;margin-bottom:8px}.metric strong{font-weight:550;font-size:20px}#warning{color:#ffc68a;margin:12px 0;min-height:24px}details{margin-top:22px;color:#a7bac8}summary{cursor:pointer}pre{white-space:pre-wrap;font-size:13px;line-height:1.6}footer{font-size:13px;margin-top:24px;color:#a7bac8}#error{color:#ffb0a7}@media(max-width:850px){body{padding:16px}.panes{grid-template-columns:1fr}.placeholder{min-height:160px}.metrics{grid-template-columns:repeat(2,1fr)}header{align-items:start}.badge{font-size:13px}}
+</style>
+<header><div><h1 id="title">Avatar / Arm assembly</h1><p id="subtitle">Reachy right arm + Shadow Hand · scripted kinematic motion</p></div><span id="status" class="badge" role="status">Connecting</span></header>
+<main>
+<div class="panes">
+<section class="pane"><h2>External camera <span id="timestamp">Waiting for simulation</span></h2><img id="external" alt="Live simulation of a Reachy arm with a Shadow Hand"></section>
+<section class="pane"><h2><span id="reference-label">Head-mounted POV</span><span id="reference-status">Unavailable</span></h2><div class="placeholder" id="placeholder"><b>The head camera comes next</b><p>This probe contains one arm and one hand.<br>No head or POV camera is installed yet.</p></div><img id="reference" alt="Original EgoDex video frame, a reference rather than simulated head POV" hidden style="width:100%;aspect-ratio:1.5;object-fit:contain;background:#17232e"><p id="reference-note" hidden style="padding:12px 18px;font-size:13px">Original recording for comparison. Simulated head POV is unavailable.</p></section>
+</div>
+<div id="stage">Starting the assembly probe…</div>
+<progress id="progress" value="0" max="1" aria-label="Scripted sequence progress"></progress>
+<div class="controls"><button class="primary" data-action="play">Play</button><button data-action="pause">Pause</button><button data-action="step">Single step</button><button data-action="restart">Restart</button><label for="speed">Speed</label><select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></div>
+<div class="metrics"><div class="metric"><small>Joint-limit violations</small><strong id="limits">—</strong></div><div class="metric"><small>Collision penetration</small><strong id="penetration">—</strong></div><div class="metric"><small>Thumb–index marker gap</small><strong id="gap">—</strong></div><div class="metric"><small>Received preview updates</small><strong id="fps">—</strong></div></div>
+<p id="warning" role="status"></p><p id="error" role="alert"></p>
+<p id="tracking">Human tracking errors: unavailable</p><p>Dataset recording: off · Playback speed changes wall-clock timing only.</p>
+<details><summary>Event log and renderer</summary><pre id="events"></pre></details>
+</main>
+<footer id="footer">Live renders from the current simulation state. This assembly check does not demonstrate human-recording replay, motor tracking, or grasping.</footer>
+<script>
+const $=id=>document.getElementById(id);
+let lastSequence=-1,lastSuccess=0,lastNewFrame=0,received=[];
+async function updateFrames(data,recorded){
+ const external=new Image();external.src='data:image/jpeg;base64,'+data.image;
+ const reference=new Image();if(recorded)reference.src='data:image/jpeg;base64,'+data.reference_image;
+ await Promise.all(recorded?[external.decode(),reference.decode()]:[external.decode()]);
+ await new Promise(resolve=>requestAnimationFrame(()=>{$('external').src=external.src;if(recorded)$('reference').src=reference.src;resolve()}));
+}
+function controls(disabled){document.querySelectorAll('button,select').forEach(x=>x.disabled=disabled)}
+controls(true);
+async function command(action,value){
+ try{const response=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,value})});const result=await response.json();if(!response.ok)throw Error(result.error);$('error').textContent=''}catch(error){$('error').textContent=error.message}
+}
+document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>command(button.dataset.action));
+$('speed').onchange=()=>command('speed',Number($('speed').value));
+async function poll(){
+ try{
+  const response=await fetch('/api/frame',{signal:AbortSignal.timeout(2000)});if(!response.ok)throw Error('Simulation server unavailable');const data=await response.json();lastSuccess=performance.now();
+  if(data.status==='error')throw Error(data.error);
+  if(Date.now()/1000-data.heartbeat>2)throw Error('Simulation updates are stale');
+  if(!data.image){$('status').textContent='Starting';return}
+  const recorded=data.source_recording!==null;
+  controls(false);$('error').textContent='';$('status').textContent=data.status==='paused'?'Paused':recorded?'Live · recorded motion':'Live · scripted probe';
+  if(data.sequence!==lastSequence){await updateFrames(data,recorded);lastSequence=data.sequence;lastNewFrame=performance.now();received.push(lastNewFrame)}
+  $('placeholder').hidden=recorded;$('reference').hidden=!recorded;$('reference-note').hidden=!recorded;
+  if(recorded){
+   $('title').textContent='Avatar / Recorded motion';$('subtitle').textContent=`EgoDex · ${data.source_recording} · right arm and hand`;
+   $('reference-label').textContent='Recorded source POV';$('reference-status').textContent=`Reference · frame ${data.source_frame_id}`;
+   const m=data.source_tracking_metrics;const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+   $('tracking').textContent=`Palm IK residual: ${(m.palm_position_error_m*1000).toFixed(3)} mm · Finger shape fit: ${(mean(m.normalized_fingertip_errors_m)*1000).toFixed(1)} mm · Original human fingertip difference: ${(mean(m.raw_human_fingertip_errors_m)*1000).toFixed(1)} mm`;
+   $('footer').textContent='EgoDex (Hoque et al., 2025; Apple). Local noncommercial research replay. Head and left-arm motion are preserved in the source but not replayed here. No motor tracking or grasping is demonstrated.';
+  }
+  const now=performance.now();received=received.filter(t=>t>now-2000);$('fps').textContent=data.status==='paused'?'Paused':`${(received.length/2).toFixed(1)} fps`;
+  $('timestamp').textContent=recorded?`Source frame ${data.source_frame_id} · ${data.source_time.toFixed(3)} s`:`Step ${data.step} · ${data.time.toFixed(3)} s`;$('stage').textContent=data.stage;$('progress').max=data.steps-1;$('progress').value=data.step;
+  $('limits').textContent=data.metrics.limit_violations;$('penetration').textContent=`${(data.metrics.max_penetration_m*1000).toFixed(3)} mm`;$('gap').textContent=`${(data.metrics.thumb_index_gap_m*1000).toFixed(1)} mm`;
+  $('speed').value=String(data.speed);$('warning').textContent=data.warning||'';$('events').textContent=`${data.renderer}\nCycle ${data.cycle+1} · Dataset recording off\n\n${data.events.join('\n')}`;
+ }catch(error){$('status').textContent='Disconnected / stale';$('error').textContent=error.message;controls(true)}
+ finally{setTimeout(poll,100)}
+}
+setInterval(()=>{if(lastSuccess && performance.now()-lastSuccess>2500){$('status').textContent='Disconnected / stale';controls(true)}},500);
+poll();
+</script>
+</html>

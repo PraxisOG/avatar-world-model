@@ -1,0 +1,8 @@
+mujoco
+numpy
+pillow
+pyopengl
+h5py
+scipy
+av
+matplotlib

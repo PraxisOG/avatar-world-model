@@ -1,0 +1,283 @@
+{
+  "recorded_at_utc": "2026-10-23T03:19:13.255343+00:00",
+  "scope": "Synthetic one-arm assembly probe only. No human replay, motor tracking, or physical grasping validated.",
+  "replay_mode": "kinematic",
+  "mujoco": "3.17.0",
+  "graphics": {
+    "vendor": "AMD",
+    "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+    "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+  },
+  "config": {
+    "shoulder_position_m": [
+      0.0,
+      0.0,
+      1.15
+    ],
+    "palm_mount_position_m": [
+      0.0,
+      0.0,
+      0.035
+    ],
+    "palm_mount_quaternion_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "sample_rate_hz": 30,
+    "segment_seconds": 0.8,
+    "render_width": 960,
+    "render_height": 640,
+    "render_backend": "egl",
+    "egl_device_id": "1",
+    "expected_renderer": "RX 6800",
+    "camera": {
+      "lookat": [
+        0.12,
+        -0.08,
+        0.85
+      ],
+      "distance": 1.35,
+      "azimuth": 135,
+      "elevation": -15
+    },
+    "penetration_tolerance_m": 0.001
+  },
+  "frames": 625,
+  "duration_source_seconds": null,
+  "duration_scripted_seconds": 20.8,
+  "validation_elapsed_seconds": 2.5016249389154837,
+  "validation_frames_per_second": 249.8376116569069,
+  "timing_scope": "Forward kinematics, collision/distance diagnostics, rendering, hashing and sparse preview PNG saves; not a production capture benchmark.",
+  "joint_count": 29,
+  "arm_joints": [
+    "r_shoulder_pitch",
+    "r_shoulder_roll",
+    "r_elbow_yaw",
+    "r_elbow_pitch",
+    "r_wrist_roll",
+    "r_wrist_pitch",
+    "r_wrist_yaw"
+  ],
+  "finger_joint_count": 22,
+  "actuator_count": 25,
+  "tendon_count": 4,
+  "joint_limit_violations": 0,
+  "max_native_contact_penetration_m": 0.0,
+  "minimum_arm_hand_collider_clearance_m": 0.009877314821896506,
+  "mount_position_residual_max_m": 1.2013193369686449e-16,
+  "mount_rotation_matrix_residual_max": 2.6645352591003757e-15,
+  "tendon_sum_residual_max_rad": 0.0,
+  "thumb_index_gap_open_m": 0.11679819062093398,
+  "thumb_index_gap_pinch_m": 0.014810559527328116,
+  "per_joint_site_response_for_0_03_rad": {
+    "r_shoulder_pitch": {
+      "max_site_position_change_m": 0.020908390392504524,
+      "max_site_rotation_matrix_change": 0.02840034193857216
+    },
+    "r_shoulder_roll": {
+      "max_site_position_change_m": 0.017296411698768995,
+      "max_site_rotation_matrix_change": 0.027668033456984875
+    },
+    "r_elbow_yaw": {
+      "max_site_position_change_m": 0.013307934587670557,
+      "max_site_rotation_matrix_change": 0.0294682025003635
+    },
+    "r_elbow_pitch": {
+      "max_site_position_change_m": 0.015302984532739173,
+      "max_site_rotation_matrix_change": 0.028543145476291942
+    },
+    "r_wrist_roll": {
+      "max_site_position_change_m": 0.006899741252910848,
+      "max_site_rotation_matrix_change": 0.027100414995712863
+    },
+    "r_wrist_pitch": {
+      "max_site_position_change_m": 0.006907627754145619,
+      "max_site_rotation_matrix_change": 0.02854314771537686
+    },
+    "r_wrist_yaw": {
+      "max_site_position_change_m": 0.003088307321422019,
+      "max_site_rotation_matrix_change": 0.026878867175296306
+    },
+    "rh_FFJ4": {
+      "max_site_position_change_m": 0.0028798920012148383,
+      "max_site_rotation_matrix_change": 0.025770223692953786
+    },
+    "rh_FFJ3": {
+      "max_site_position_change_m": 0.0028798920012149862,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_FFJ2": {
+      "max_site_position_change_m": 0.0015299426256454459,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_FFJ1": {
+      "max_site_position_change_m": 0.0007799707503290265,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_MFJ4": {
+      "max_site_position_change_m": 0.0028798920012148652,
+      "max_site_rotation_matrix_change": 0.025770223692953786
+    },
+    "rh_MFJ3": {
+      "max_site_position_change_m": 0.0028798920012149862,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_MFJ2": {
+      "max_site_position_change_m": 0.0015299426256454459,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_MFJ1": {
+      "max_site_position_change_m": 0.0007799707503290265,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_RFJ4": {
+      "max_site_position_change_m": 0.002879892001215075,
+      "max_site_rotation_matrix_change": 0.0261964384783393
+    },
+    "rh_RFJ3": {
+      "max_site_position_change_m": 0.0028798920012149862,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_RFJ2": {
+      "max_site_position_change_m": 0.0015299426256454459,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_RFJ1": {
+      "max_site_position_change_m": 0.0007799707503290265,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_LFJ5": {
+      "max_site_position_change_m": 0.002783862231399459,
+      "max_site_rotation_matrix_change": 0.027645969368106926
+    },
+    "rh_LFJ4": {
+      "max_site_position_change_m": 0.002879892001215075,
+      "max_site_rotation_matrix_change": 0.0261964384783393
+    },
+    "rh_LFJ3": {
+      "max_site_position_change_m": 0.0028798920012149862,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_LFJ2": {
+      "max_site_position_change_m": 0.0015299426256454459,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_LFJ1": {
+      "max_site_position_change_m": 0.0007799707503290265,
+      "max_site_rotation_matrix_change": 0.027100414995712946
+    },
+    "rh_THJ5": {
+      "max_site_position_change_m": 5.551115123125783e-17,
+      "max_site_rotation_matrix_change": 0.02691367290749791
+    },
+    "rh_THJ4": {
+      "max_site_position_change_m": 0.002909890876227651,
+      "max_site_rotation_matrix_change": 0.02834662125314802
+    },
+    "rh_THJ3": {
+      "max_site_position_change_m": 0.0017699336257467214,
+      "max_site_rotation_matrix_change": 0.02834662125314802
+    },
+    "rh_THJ2": {
+      "max_site_position_change_m": 0.0017699336257467305,
+      "max_site_rotation_matrix_change": 0.028543149954449065
+    },
+    "rh_THJ1": {
+      "max_site_position_change_m": 0.0008099696253417134,
+      "max_site_rotation_matrix_change": 0.028543149954449232
+    }
+  },
+  "fingertip_motion_span_m": {
+    "index": [
+      0.2907260400759765,
+      0.23662489627792882,
+      0.25326006170263005
+    ],
+    "middle": [
+      0.30285054342016715,
+      0.23207990942798482,
+      0.2483955524102539
+    ],
+    "ring": [
+      0.31266620781415866,
+      0.22394418111604542,
+      0.2396878665462736
+    ],
+    "little": [
+      0.3211831502986633,
+      0.21378866073173358,
+      0.22881839386076586
+    ],
+    "thumb": [
+      0.22981359997067696,
+      0.21387315711818702,
+      0.22985134412717156
+    ]
+  },
+  "unique_rendered_frames": 539,
+  "reload_max_pixel_errors": [
+    0,
+    0,
+    0
+  ],
+  "source_tracking_metrics": null,
+  "acceptance_tolerances": {
+    "penetration_m": 0.001,
+    "mount_position_m": 1e-10,
+    "mount_rotation_matrix": 1e-10,
+    "tendon_sum_rad": 1e-10,
+    "replay_pixel_error": 0
+  },
+  "tolerance_rationale": "Assembly numerical checks use floating point tolerances; penetration budget is a conservative 1 mm probe criterion, not a source replay or physical safety threshold.",
+  "code_sha256": {
+    "scripts/arm_assembly.py": "74163671f25a281931bb153900cb1fde78326b47af1d0a52497d8423694fe0d4",
+    "scripts/probe_validation.py": "529b2c00141dcdb8fe710308e926a9714705e17ff22ba21b3b0e2abd01f2585e",
+    "config/arm_probe.json": "037671440d16a51815ab0f66cdbe4587e2613ebdf72de3695b3053bea0932f5f",
+    "assets.lock.json": "67ca829b325cd517e7b69e7c2e9d666d5809d9e4bf41624a46ddc9bd71392f90",
+    "requirements.lock.txt": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+    "scripts/probe_dashboard.py": "e9f2dfeebcfce88425811b00417d7f87e4c0c1c372d6208fed99fa3b7b59375e",
+    "scripts/run_arm_probe.py": "3ec098c31d38c9219f26f4910032fdc1f8c6a8c3368ad5283bc8c06ff1f380bf",
+    "ui/probe.html": "672359d62e6536bef693d719dc86011b2dea893a80c21eec364026cfdec565dc",
+    "tests/test_arm_probe.py": "7c922830c5176ac50b6fb8f537fbf0e098ed99ba79029a968b20ad43228dd17e",
+    "tests/check_dashboard_browser.py": "651017c323658c6879518095b3ea90455a5aa9677dd4574a6493ca72069a8502"
+  },
+  "passed": true,
+  "live_dashboard_check": {
+    "url": "http://127.0.0.1:8765",
+    "status": "live",
+    "measured_seconds": 3.000964349019341,
+    "produced_frame_updates": 88,
+    "measured_producer_fps": 29.32390717295817,
+    "playback_speed": 1.0,
+    "recording": false
+  },
+  "regression_tests": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "passed": 5,
+    "failed": 0
+  },
+  "browser_tests": {
+    "command": "uv run --no-project --python /usr/bin/python3 --with playwright tests/check_dashboard_browser.py",
+    "passed": true,
+    "checks": [
+      "live image changes",
+      "pause stable",
+      "single-step timestamp",
+      "restart zero",
+      "speed preserves sample index",
+      "head POV unavailable label",
+      "stale/disconnected state and recovery",
+      "browser close leaves simulation running",
+      "saved trajectory unchanged",
+      "no JavaScript errors"
+    ]
+  },
+  "artifact_sha256": {
+    "trajectory.npz": "74cad8e83a9bb569b239d28caf6fafe833f081ebffba9cc6bde6b8f6308625f3",
+    "manifest.json": "09ddff8bea9d13657382c3a00d388627bc98d4c88ded0837e21f5653fcad0ceb",
+    "assembly-preview.gif": "21eb21b557047aee8144065b66f6d212318b158cebcf7e70f6c78b678c8f59d0",
+    "dashboard.png": "fa33330b336f2e3dca0f14cf143cacdf921a1431e2fd5b8394d1af21db40d3f0"
+  }
+}

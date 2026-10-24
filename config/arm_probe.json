@@ -1,0 +1,14 @@
+{
+  "shoulder_position_m": [0.0, 0.0, 1.15],
+  "palm_mount_position_m": [0.0, 0.0, 0.035],
+  "palm_mount_quaternion_wxyz": [1.0, 0.0, 0.0, 0.0],
+  "sample_rate_hz": 30,
+  "segment_seconds": 0.8,
+  "render_width": 960,
+  "render_height": 640,
+  "render_backend": "egl",
+  "egl_device_id": "1",
+  "expected_renderer": "RX 6800",
+  "camera": {"lookat": [0.12, -0.08, 0.85], "distance": 1.35, "azimuth": 135, "elevation": -15},
+  "penetration_tolerance_m": 0.001
+}

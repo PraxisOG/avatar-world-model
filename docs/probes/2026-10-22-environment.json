@@ -1,0 +1,1038 @@
+{
+  "scope": "Environment and separate upstream model rendering only; assembly and human replay remain pending.",
+  "development_gpu": "AMD Radeon RX 6800",
+  "training_hardware": "V620 fleet reserved for later training; no remote hardware accessed.",
+  "assets": {
+    "reachy2_mujoco_assets": {
+      "url": "https://github.com/pollen-robotics/reachy2_mujoco_assets.git",
+      "revision": "bbf3e1c3dd3cc7a211887a3690686920260f2017",
+      "license": "Apache-2.0",
+      "license_path": "LICENSE",
+      "sparse_paths": [
+        "/LICENSE",
+        "/README.md",
+        "/assets/reachy2_asset.xml",
+        "/objects/reachy2_body.xml",
+        "/scenes/base_scene.xml",
+        "/assets/meshes/reachy2/"
+      ]
+    },
+    "mujoco_menagerie": {
+      "url": "https://github.com/google-deepmind/mujoco_menagerie.git",
+      "revision": "cda5236f98383f6fbaa4820c6b18dba892cd087f",
+      "license": "Apache-2.0 (Shadow Hand subtree)",
+      "license_path": "shadow_hand/LICENSE",
+      "sparse_paths": [
+        "/shadow_hand/"
+      ]
+    }
+  },
+  "dependencies": [
+    "absl-py==2.5.1",
+    "etils==1.14.0",
+    "fsspec==2026.9.0",
+    "glfw==2.11.0",
+    "mujoco==3.17.0",
+    "numpy==2.5.4",
+    "pillow==13.0.0",
+    "pyopengl==3.1.10",
+    "typing-extensions==4.16.0",
+    "websockets==17.3",
+    "zipp==4.1.2"
+  ],
+  "probes": {
+    "render-probe": {
+      "stage": "environment rendering probe",
+      "recorded_at_utc": "2026-10-23T03:00:51.559819+00:00",
+      "replay_mode": "kinematic",
+      "human_source": null,
+      "robot_assembly_validated": false,
+      "model": "built-in scripted hinge",
+      "entry_xml_sha256": "6696692c706e961fea923c516a547d5ffbc0a4833c4887de6820a01a1989d464",
+      "script_sha256": "ee27f9667994fd5a416c71632bc52488e6bf4c6a9e01a85ce6c5cdf1bdf73609",
+      "dependency_lock_sha256": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+      "camera": {
+        "lookat": [
+          0.0,
+          0.0,
+          0.65
+        ],
+        "distance": 2.5,
+        "azimuth": 135.0,
+        "elevation": -20.0
+      },
+      "python": "3.12.3",
+      "mujoco": "3.17.0",
+      "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+      "graphics": {
+        "vendor": "AMD",
+        "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+        "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+      },
+      "mujoco_gl": "default",
+      "mujoco_egl_device_id": null,
+      "resolution": [
+        640,
+        480
+      ],
+      "frames": 60,
+      "render_loop_seconds": 0.0843359639402479,
+      "render_loop_fps": 711.440258660114,
+      "timing_scope": "forward kinematics, rendering, readback and image hashing; excludes setup and PNG writes",
+      "unique_frame_hashes": 31,
+      "repeat_initial_state_max_pixel_error": 0,
+      "viewer_frames": 90,
+      "physics_steps": 0,
+      "joints": [
+        {
+          "name": "probe_hinge",
+          "limited": true,
+          "range": [
+            -1.0471975511965976,
+            1.0471975511965976
+          ]
+        }
+      ],
+      "actuators": 0,
+      "tendons": 0,
+      "equalities": 0,
+      "preview_hashes": {
+        "first.png": "f258dced06ce69409099c511635e0d68717b8c4c0a4d17916f44a0cdf0023ffe",
+        "last.png": "1fe5ccb4b2d079a188bb02f744cb527e6492cdc1910141d86407a244ce9a6f68"
+      }
+    },
+    "shadow-probe": {
+      "stage": "environment rendering probe",
+      "recorded_at_utc": "2026-10-23T03:00:52.370436+00:00",
+      "replay_mode": "kinematic",
+      "human_source": null,
+      "robot_assembly_validated": false,
+      "model": ".cache/upstream/mujoco_menagerie/shadow_hand/scene_right.xml",
+      "entry_xml_sha256": "182a2b704ab70c91e665864ef58396e5f7cd14fd85a6f32a9cf0ba171adb08a9",
+      "script_sha256": "ee27f9667994fd5a416c71632bc52488e6bf4c6a9e01a85ce6c5cdf1bdf73609",
+      "dependency_lock_sha256": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+      "camera": {
+        "lookat": [
+          0.1809628324477876,
+          -4.971308299739352e-07,
+          0.0008932988479868065
+        ],
+        "distance": 0.72,
+        "azimuth": 135.0,
+        "elevation": -20.0
+      },
+      "python": "3.12.3",
+      "mujoco": "3.17.0",
+      "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+      "graphics": {
+        "vendor": "AMD",
+        "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+        "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+      },
+      "mujoco_gl": "default",
+      "mujoco_egl_device_id": null,
+      "resolution": [
+        640,
+        480
+      ],
+      "frames": 60,
+      "render_loop_seconds": 0.27369606704451144,
+      "render_loop_fps": 219.22127215018455,
+      "timing_scope": "forward kinematics, rendering, readback and image hashing; excludes setup and PNG writes",
+      "unique_frame_hashes": 1,
+      "repeat_initial_state_max_pixel_error": 0,
+      "viewer_frames": 0,
+      "physics_steps": 0,
+      "joints": [
+        {
+          "name": "rh_WRJ2",
+          "limited": true,
+          "range": [
+            -0.523599,
+            0.174533
+          ]
+        },
+        {
+          "name": "rh_WRJ1",
+          "limited": true,
+          "range": [
+            -0.698132,
+            0.488692
+          ]
+        },
+        {
+          "name": "rh_FFJ4",
+          "limited": true,
+          "range": [
+            -0.349066,
+            0.349066
+          ]
+        },
+        {
+          "name": "rh_FFJ3",
+          "limited": true,
+          "range": [
+            -0.261799,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_FFJ2",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_FFJ1",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_MFJ4",
+          "limited": true,
+          "range": [
+            -0.349066,
+            0.349066
+          ]
+        },
+        {
+          "name": "rh_MFJ3",
+          "limited": true,
+          "range": [
+            -0.261799,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_MFJ2",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_MFJ1",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_RFJ4",
+          "limited": true,
+          "range": [
+            -0.349066,
+            0.349066
+          ]
+        },
+        {
+          "name": "rh_RFJ3",
+          "limited": true,
+          "range": [
+            -0.261799,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_RFJ2",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_RFJ1",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_LFJ5",
+          "limited": true,
+          "range": [
+            0.0,
+            0.785398
+          ]
+        },
+        {
+          "name": "rh_LFJ4",
+          "limited": true,
+          "range": [
+            -0.349066,
+            0.349066
+          ]
+        },
+        {
+          "name": "rh_LFJ3",
+          "limited": true,
+          "range": [
+            -0.261799,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_LFJ2",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_LFJ1",
+          "limited": true,
+          "range": [
+            0.0,
+            1.5708
+          ]
+        },
+        {
+          "name": "rh_THJ5",
+          "limited": true,
+          "range": [
+            -1.0472,
+            1.0472
+          ]
+        },
+        {
+          "name": "rh_THJ4",
+          "limited": true,
+          "range": [
+            0.0,
+            1.22173
+          ]
+        },
+        {
+          "name": "rh_THJ3",
+          "limited": true,
+          "range": [
+            -0.20944,
+            0.20944
+          ]
+        },
+        {
+          "name": "rh_THJ2",
+          "limited": true,
+          "range": [
+            -0.698132,
+            0.698132
+          ]
+        },
+        {
+          "name": "rh_THJ1",
+          "limited": true,
+          "range": [
+            -0.261799,
+            1.5708
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "actuators": 20,
+      "tendons": 4,
+      "equalities": 0,
+      "preview_hashes": {
+        "first.png": "ea0769d92acf670d014bbf9221dbb110e229e6a3e69aa8646398f5c8badebe60",
+        "last.png": "ea0769d92acf670d014bbf9221dbb110e229e6a3e69aa8646398f5c8badebe60"
+      }
+    },
+    "reachy-probe": {
+      "stage": "environment rendering probe",
+      "recorded_at_utc": "2026-10-23T03:00:52.989396+00:00",
+      "replay_mode": "kinematic",
+      "human_source": null,
+      "robot_assembly_validated": false,
+      "model": ".cache/upstream/reachy2_mujoco_assets/scenes/base_scene.xml",
+      "entry_xml_sha256": "64f0da355f88ea4290597c9ba6d0dcb964be73b5468e8d7145b32887de25e966",
+      "script_sha256": "ee27f9667994fd5a416c71632bc52488e6bf4c6a9e01a85ce6c5cdf1bdf73609",
+      "dependency_lock_sha256": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+      "camera": {
+        "lookat": [
+          0.00293824243534202,
+          -0.00012410713697408315,
+          0.5953215770863468
+        ],
+        "distance": 2.479177416662166,
+        "azimuth": 135.0,
+        "elevation": -20.0
+      },
+      "python": "3.12.3",
+      "mujoco": "3.17.0",
+      "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+      "graphics": {
+        "vendor": "AMD",
+        "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+        "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+      },
+      "mujoco_gl": "default",
+      "mujoco_egl_device_id": null,
+      "resolution": [
+        640,
+        480
+      ],
+      "frames": 60,
+      "render_loop_seconds": 0.1187454069731757,
+      "render_loop_fps": 505.282701280007,
+      "timing_scope": "forward kinematics, rendering, readback and image hashing; excludes setup and PNG writes",
+      "unique_frame_hashes": 1,
+      "repeat_initial_state_max_pixel_error": 0,
+      "viewer_frames": 0,
+      "physics_steps": 0,
+      "joints": [
+        {
+          "name": "mobile_base",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "drivewhl1_joint",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "drivewhl2_joint",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "drivewhl3_joint",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": null,
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "tripod_joint",
+          "limited": true,
+          "range": [
+            0.0,
+            0.21
+          ]
+        },
+        {
+          "name": "left_bar_joint_mimic",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "left_bar_prism_joint_mimic",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "right_bar_joint_mimic",
+          "limited": true,
+          "range": [
+            -1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "right_bar_prism_joint_mimic",
+          "limited": false,
+          "range": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "neck_roll",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "neck_pitch",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "neck_yaw",
+          "limited": true,
+          "range": [
+            -1.57,
+            1.57
+          ]
+        },
+        {
+          "name": "antenna_left",
+          "limited": true,
+          "range": [
+            -1.5708,
+            1.5708
+          ]
+        },
+        {
+          "name": "antenna_right",
+          "limited": true,
+          "range": [
+            -1.5708,
+            1.5708
+          ]
+        },
+        {
+          "name": "r_shoulder_pitch",
+          "limited": true,
+          "range": [
+            -3.14159,
+            3.14159
+          ]
+        },
+        {
+          "name": "r_shoulder_roll",
+          "limited": true,
+          "range": [
+            -3.14159,
+            0.0
+          ]
+        },
+        {
+          "name": "r_elbow_yaw",
+          "limited": true,
+          "range": [
+            -3.14159,
+            3.14159
+          ]
+        },
+        {
+          "name": "r_elbow_pitch",
+          "limited": true,
+          "range": [
+            -2.25,
+            0.1
+          ]
+        },
+        {
+          "name": "r_wrist_roll",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "r_wrist_pitch",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "r_wrist_yaw",
+          "limited": true,
+          "range": [
+            -1.57,
+            1.57
+          ]
+        },
+        {
+          "name": "r_hand_finger",
+          "limited": true,
+          "range": [
+            0.0,
+            2.27
+          ]
+        },
+        {
+          "name": "r_hand_finger_proximal",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "r_hand_finger_distal",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "r_hand_finger_proximal_mimic",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "r_hand_finger_distal_mimic",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "l_shoulder_pitch",
+          "limited": true,
+          "range": [
+            -3.14159,
+            3.14159
+          ]
+        },
+        {
+          "name": "l_shoulder_roll",
+          "limited": true,
+          "range": [
+            0.0,
+            3.14159
+          ]
+        },
+        {
+          "name": "l_elbow_yaw",
+          "limited": true,
+          "range": [
+            -3.14159,
+            3.14159
+          ]
+        },
+        {
+          "name": "l_elbow_pitch",
+          "limited": true,
+          "range": [
+            -2.25,
+            0.1
+          ]
+        },
+        {
+          "name": "l_wrist_roll",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "l_wrist_pitch",
+          "limited": true,
+          "range": [
+            -0.7,
+            0.7
+          ]
+        },
+        {
+          "name": "l_wrist_yaw",
+          "limited": true,
+          "range": [
+            -1.57,
+            1.57
+          ]
+        },
+        {
+          "name": "l_hand_finger",
+          "limited": true,
+          "range": [
+            0.0,
+            2.27
+          ]
+        },
+        {
+          "name": "l_hand_finger_proximal",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "l_hand_finger_distal",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "l_hand_finger_proximal_mimic",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        },
+        {
+          "name": "l_hand_finger_distal_mimic",
+          "limited": true,
+          "range": [
+            -0.51,
+            0.554
+          ]
+        }
+      ],
+      "actuators": 25,
+      "tendons": 0,
+      "equalities": 12,
+      "preview_hashes": {
+        "first.png": "e961d499ce8c0b6bcb8e007541f7363ecec467ba81fe1e832d215c40246b875d",
+        "last.png": "e961d499ce8c0b6bcb8e007541f7363ecec467ba81fe1e832d215c40246b875d"
+      }
+    },
+    "egl-probe": {
+      "stage": "environment rendering probe",
+      "recorded_at_utc": "2026-10-23T03:00:53.560690+00:00",
+      "replay_mode": "kinematic",
+      "human_source": null,
+      "robot_assembly_validated": false,
+      "model": "built-in scripted hinge",
+      "entry_xml_sha256": "6696692c706e961fea923c516a547d5ffbc0a4833c4887de6820a01a1989d464",
+      "script_sha256": "ee27f9667994fd5a416c71632bc52488e6bf4c6a9e01a85ce6c5cdf1bdf73609",
+      "dependency_lock_sha256": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+      "camera": {
+        "lookat": [
+          0.0,
+          0.0,
+          0.65
+        ],
+        "distance": 2.5,
+        "azimuth": 135.0,
+        "elevation": -20.0
+      },
+      "python": "3.12.3",
+      "mujoco": "3.17.0",
+      "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+      "graphics": {
+        "vendor": "AMD",
+        "renderer": "AMD Ryzen 5 7600 6-Core Processor (radeonsi, raphael_mendocino, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+        "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+      },
+      "mujoco_gl": "egl",
+      "mujoco_egl_device_id": null,
+      "resolution": [
+        640,
+        480
+      ],
+      "frames": 60,
+      "render_loop_seconds": 0.27042964298743755,
+      "render_loop_fps": 221.86916839877358,
+      "timing_scope": "forward kinematics, rendering, readback and image hashing; excludes setup and PNG writes",
+      "unique_frame_hashes": 31,
+      "repeat_initial_state_max_pixel_error": 0,
+      "viewer_frames": 0,
+      "physics_steps": 0,
+      "joints": [
+        {
+          "name": "probe_hinge",
+          "limited": true,
+          "range": [
+            -1.0471975511965976,
+            1.0471975511965976
+          ]
+        }
+      ],
+      "actuators": 0,
+      "tendons": 0,
+      "equalities": 0,
+      "preview_hashes": {
+        "first.png": "f258dced06ce69409099c511635e0d68717b8c4c0a4d17916f44a0cdf0023ffe",
+        "last.png": "1fe5ccb4b2d079a188bb02f744cb527e6492cdc1910141d86407a244ce9a6f68"
+      }
+    },
+    "egl-rx6800-probe": {
+      "stage": "environment rendering probe",
+      "recorded_at_utc": "2026-10-23T03:00:53.913422+00:00",
+      "replay_mode": "kinematic",
+      "human_source": null,
+      "robot_assembly_validated": false,
+      "model": "built-in scripted hinge",
+      "entry_xml_sha256": "6696692c706e961fea923c516a547d5ffbc0a4833c4887de6820a01a1989d464",
+      "script_sha256": "ee27f9667994fd5a416c71632bc52488e6bf4c6a9e01a85ce6c5cdf1bdf73609",
+      "dependency_lock_sha256": "103a1f46cbccd23e90ce4c357c33c26baaeae0b7261a43cf27ab634efa348c0b",
+      "camera": {
+        "lookat": [
+          0.0,
+          0.0,
+          0.65
+        ],
+        "distance": 2.5,
+        "azimuth": 135.0,
+        "elevation": -20.0
+      },
+      "python": "3.12.3",
+      "mujoco": "3.17.0",
+      "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.39",
+      "graphics": {
+        "vendor": "AMD",
+        "renderer": "AMD Radeon RX 6800 (radeonsi, navi21, LLVM 20.1.2, DRM 3.64, 6.17.0-35-generic)",
+        "version": "4.6 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.2"
+      },
+      "mujoco_gl": "egl",
+      "mujoco_egl_device_id": "1",
+      "resolution": [
+        640,
+        480
+      ],
+      "frames": 60,
+      "render_loop_seconds": 0.07529264304321259,
+      "render_loop_fps": 796.8906067696985,
+      "timing_scope": "forward kinematics, rendering, readback and image hashing; excludes setup and PNG writes",
+      "unique_frame_hashes": 31,
+      "repeat_initial_state_max_pixel_error": 0,
+      "viewer_frames": 0,
+      "physics_steps": 0,
+      "joints": [
+        {
+          "name": "probe_hinge",
+          "limited": true,
+          "range": [
+            -1.0471975511965976,
+            1.0471975511965976
+          ]
+        }
+      ],
+      "actuators": 0,
+      "tendons": 0,
+      "equalities": 0,
+      "preview_hashes": {
+        "first.png": "f258dced06ce69409099c511635e0d68717b8c4c0a4d17916f44a0cdf0023ffe",
+        "last.png": "1fe5ccb4b2d079a188bb02f744cb527e6492cdc1910141d86407a244ce9a6f68"
+      }
+    }
+  },
+  "asset_fetch_checks": [
+    "fresh pinned fetch passed",
+    "repeat fetch passed",
+    "dirty checkout rejected without modification"
+  ],
+  "observations": [
+    "Native viewer shutdown initially raced GLFW process cleanup; joining viewer threads fixed the observed error, with two subsequent clean exits.",
+    "EGL default selects Ryzen integrated graphics; MUJOCO_EGL_DEVICE_ID=1 selects RX 6800 on this host.",
+    "Reachy r_wrist_roll, r_wrist_pitch and r_wrist_yaw overlap with Shadow rh_WRJ1 and rh_WRJ2 responsibilities; assembly boundary is still pending.",
+    "Shadow has four fixed tendon sums and no equality constraints. Equal distal angles would be a retargeting choice, not an upstream equality constraint.",
+    "Upstream static scenes include a Reachy free base and a Shadow scene object. Neither is the final fixed-arm, contact-free replay scene.",
+    "Rendering measurements cover only 60 frames per probe; these are smoke checks, not sustained replay benchmarks."
+  ]
+}
